@@ -1,7 +1,8 @@
 import { useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Upload } from 'lucide-react'
+import { ArrowLeft, Upload, Download } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { downloadImage } from '../utils/download'
 import LoadingSpinner from '../components/LoadingSpinner'
 import { useReplicate } from '../hooks/useReplicate'
 import { useTelegram } from '../hooks/useTelegram'
@@ -156,15 +157,23 @@ export default function Enhance() {
                         <div className="absolute top-3 right-3 bg-accent-primary/80 text-white text-xs px-2 py-1 rounded-lg">После</div>
                     </div>
 
-                    <button
-                        onClick={() => {
-                            setPreview(null)
-                            reset()
-                        }}
-                        className="w-full mt-4 py-3 rounded-xl bg-bg-card border border-accent-primary/20 text-txt-secondary text-sm font-medium hover:border-accent-primary/40 transition-colors"
-                    >
-                        🔄 Улучшить другое фото
-                    </button>
+                    <div className="flex gap-2 w-full mt-4">
+                        <button
+                            onClick={() => {
+                                setPreview(null)
+                                reset()
+                            }}
+                            className="flex-1 py-3 rounded-xl bg-bg-card border border-accent-primary/20 text-txt-secondary text-sm font-medium hover:border-accent-primary/40 transition-colors"
+                        >
+                            🔄 Новое
+                        </button>
+                        <button
+                            onClick={() => downloadImage(result.output_urls?.[0] || '', `enhanced-${Date.now()}.png`)}
+                            className="flex-1 py-3 flex items-center justify-center gap-2 rounded-xl bg-accent-primary text-white text-sm font-medium hover:bg-accent-primary/90 transition-colors"
+                        >
+                            <Download size={16} /> Скачать
+                        </button>
+                    </div>
                 </motion.div>
             )}
         </div>

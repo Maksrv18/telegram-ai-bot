@@ -25,8 +25,11 @@ app.use("/webhook", webhookRoutes);
 
 // Serve Mini App static files in production
 if (process.env.NODE_ENV === "production") {
-    const miniappPath = path.resolve(__dirname, "../miniapp/dist");
+    const miniappPath = path.join(process.cwd(), "miniapp/dist");
     app.use("/miniapp", express.static(miniappPath));
+    app.get("/miniapp/*", (req, res) => {
+        res.sendFile(path.join(miniappPath, "index.html"));
+    });
 }
 
 // Health check
@@ -35,21 +38,25 @@ app.get("/health", (_req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
-    console.log(`📡 Health check: http://localhost:${PORT}/health`);
-
+async function startServer() {
     // Create and start bot
     const bot = createBot();
-    setBotInstance(bot);
 
-    if (process.env.NODE_ENV === "development") {
+    if (process.env.NODE_ENV === "production") {
+        await bot.init();
+        console.log(`🔗 Webhook mode — set webhook to: ${process.env.TELEGRAM_WEBHOOK_URL}`);
+    } else {
         // Long polling for development
         startBot(bot);
         console.log("🤖 Bot started in long polling mode");
-    } else {
-        console.log(
-            `🔗 Webhook mode — set webhook to: ${process.env.TELEGRAM_WEBHOOK_URL}`
-        );
     }
-});
+
+    setBotInstance(bot);
+
+    app.listen(PORT, () => {
+        console.log(`🚀 Server running on http://localhost:${PORT}`);
+        console.log(`📡 Health check: http://localhost:${PORT}/health`);
+    });
+}
+
+startServer().catch(console.error);

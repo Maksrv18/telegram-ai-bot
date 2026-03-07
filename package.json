@@ -7,7 +7,7 @@
     "dev": "concurrently \"npm run server:dev\" \"npm run miniapp:dev\"",
     "server:dev": "npx nodemon --exec 'npx ts-node' server/index.ts",
     "miniapp:dev": "cd miniapp && npx vite --port 5173",
-    "build": "npx tsc && cd miniapp && npx vite build",
+    "build": "npx tsc && mkdir -p dist/database && cp database/schema.sql dist/database/ && cd miniapp && npx vite build",
     "start": "node dist/server/index.js",
     "db:init": "npx ts-node scripts/initDb.ts",
     "test:models": "npx ts-node scripts/testModels.ts"

@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  telegram-bot:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    networks:
+      - n8n_default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tgbot.rule=Host(`n8n-max.ru`) && (PathPrefix(`/miniapp`) || PathPrefix(`/api`) || PathPrefix(`/webhook`))"
+      - "traefik.http.routers.tgbot.entrypoints=websecure"
+      - "traefik.http.routers.tgbot.tls=true"
+      - "traefik.http.routers.tgbot.tls.certresolver=le"
+      - "traefik.http.services.tgbot.loadbalancer.server.port=3001"
+
+networks:
+  n8n_default:
+    external: true

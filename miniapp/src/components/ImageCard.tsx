@@ -1,5 +1,6 @@
 import { Download, Share2 } from 'lucide-react'
 import { useTelegram } from '../hooks/useTelegram'
+import { downloadImage } from '../utils/download'
 
 interface ImageCardProps {
     url: string
@@ -10,12 +11,12 @@ interface ImageCardProps {
 export default function ImageCard({ url, prompt, onDownload }: ImageCardProps) {
     const { hapticFeedback } = useTelegram()
 
-    const handleDownload = () => {
+    const handleDownload = async () => {
         hapticFeedback('medium')
         if (onDownload) {
             onDownload()
         } else {
-            window.open(url, '_blank')
+            await downloadImage(url, `ai-generated-${Date.now()}.png`);
         }
     }
 
@@ -39,21 +40,19 @@ export default function ImageCard({ url, prompt, onDownload }: ImageCardProps) {
                     className="w-full aspect-square object-cover"
                     loading="lazy"
                 />
-                {/* Overlay on hover */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-4 gap-3">
-                    <button
-                        onClick={handleDownload}
-                        className="flex items-center gap-1.5 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-white/30 transition-colors"
-                    >
-                        <Download size={16} />
-                        Скачать
-                    </button>
+                {/* Permanent action buttons below image */}
+                <div className="absolute top-2 right-2 flex gap-2">
                     <button
                         onClick={handleShare}
-                        className="flex items-center gap-1.5 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-white/30 transition-colors"
+                        className="w-8 h-8 flex items-center justify-center bg-black/50 backdrop-blur-md text-white rounded-full hover:bg-black/70 transition-colors shadow-lg"
                     >
-                        <Share2 size={16} />
-                        Поделиться
+                        <Share2 size={14} />
+                    </button>
+                    <button
+                        onClick={handleDownload}
+                        className="w-8 h-8 flex items-center justify-center bg-accent-primary/80 backdrop-blur-md text-white rounded-full hover:bg-accent-primary transition-colors shadow-lg"
+                    >
+                        <Download size={14} />
                     </button>
                 </div>
             </div>
