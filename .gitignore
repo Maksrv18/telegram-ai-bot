@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.env
+data/
+*.db
+miniapp/dist/
+miniapp/node_modules/

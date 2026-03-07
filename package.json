@@ -1,0 +1,37 @@
+{
+  "name": "telegram-ai-bot",
+  "version": "1.0.0",
+  "description": "Telegram AI Bot with Mini App — image generation, enhancement, background removal, video generation, and LLM chat via Replicate API",
+  "main": "server/index.ts",
+  "scripts": {
+    "dev": "concurrently \"npm run server:dev\" \"npm run miniapp:dev\"",
+    "server:dev": "npx nodemon --exec 'npx ts-node' server/index.ts",
+    "miniapp:dev": "cd miniapp && npx vite --port 5173",
+    "build": "npx tsc && cd miniapp && npx vite build",
+    "start": "node dist/server/index.js",
+    "db:init": "npx ts-node scripts/initDb.ts",
+    "test:models": "npx ts-node scripts/testModels.ts"
+  },
+  "dependencies": {
+    "grammy": "^1.30.0",
+    "replicate": "^0.34.0",
+    "express": "^4.21.0",
+    "cors": "^2.8.5",
+    "better-sqlite3": "^11.0.0",
+    "zod": "^3.23.0",
+    "pino": "^9.0.0",
+    "pino-pretty": "^11.0.0",
+    "dotenv": "^16.4.0",
+    "axios": "^1.7.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "ts-node": "^10.9.0",
+    "nodemon": "^3.1.0",
+    "concurrently": "^9.0.0",
+    "@types/express": "^5.0.0",
+    "@types/better-sqlite3": "^7.6.0",
+    "@types/cors": "^2.8.17",
+    "@types/node": "^22.0.0"
+  }
+}
