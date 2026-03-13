@@ -19,7 +19,7 @@ export async function handleGenerate(ctx: Context): Promise<void> {
             "🎨 *Генерация изображений*\n\n" +
             "Отправь промт после команды:\n" +
             "`/generate красивый закат над горами`\n\n" +
-            "Поддерживаемые модели: FLUX Schnell ⚡",
+            "Поддерживаемые модели: Nano Banana Pro",
             { parse_mode: "Markdown" }
         );
         return;
@@ -32,7 +32,7 @@ export async function handleGenerate(ctx: Context): Promise<void> {
     const genId = storage.createGeneration({
         userId,
         type: "image",
-        model: "flux_schnell",
+        model: "nano_banana_pro",
         prompt,
     });
 
@@ -59,7 +59,6 @@ export async function handleGenerate(ctx: Context): Promise<void> {
 
         const startTime = Date.now();
         const images = await replicateService.generateImage(prompt, {
-            model: "flux_schnell",
             numOutputs: 1,
             aspectRatio: "1:1",
         });
@@ -85,13 +84,12 @@ export async function handleGenerate(ctx: Context): Promise<void> {
         // Send result
         for (const imageUrl of images) {
             await ctx.replyWithPhoto(imageUrl, {
-                caption: `🎨 *${prompt}*\n⏱ ${(processingTime / 1000).toFixed(1)} сек | FLUX Schnell ⚡`,
+                caption: `🎨 *${prompt}*\n⏱ ${(processingTime / 1000).toFixed(1)} сек | Nano Banana Pro`,
                 parse_mode: "Markdown",
                 reply_markup: {
                     inline_keyboard: [
                         [
                             { text: "🔄 Ещё раз", callback_data: `regen:${genId}` },
-                            { text: "✨ Улучшить", callback_data: `upscale:${genId}` },
                         ],
                     ],
                 },

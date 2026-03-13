@@ -15,7 +15,6 @@ async function testAllModels() {
     try {
         const images = await service.generateImage(
             "a beautiful sunset over mountains, digital art",
-            { model: "flux_schnell", numOutputs: 1, aspectRatio: "1:1" }
         );
         console.log("✅ URL:", images[0]);
     } catch (err) {

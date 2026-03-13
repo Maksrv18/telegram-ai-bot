@@ -4,8 +4,8 @@ import * as storage from "../utils/storage";
 
 export async function handleEnhance(ctx: Context): Promise<void> {
     await ctx.reply(
-        "✨ *Улучшение изображений*\n\n" +
-        "Отправьте мне фотографию, и я улучшу её качество в 4x с помощью Real\\-ESRGAN\\.\n\n" +
+        "🪄 *Удаление фона*\n\n" +
+        "Отправьте мне фотографию, и я вырежу фон с помощью ИИ\\.\n\n" +
         "Просто отправьте фото в чат\\!",
         { parse_mode: "MarkdownV2" }
     );
@@ -20,17 +20,17 @@ export async function processEnhance(
 
     const genId = storage.createGeneration({
         userId,
-        type: "upscale",
-        model: "real_esrgan",
+        type: "removebg",
+        model: "bria_removebg",
         inputUrl: photoUrl,
     });
 
-    const progressMsg = await ctx.reply("✨ Улучшаю изображение (4x)...");
+    const progressMsg = await ctx.reply("🪄 Удаляю фон...");
 
     try {
         storage.incrementRequestCount(userId);
         const startTime = Date.now();
-        const result = await replicateService.upscaleImage(photoUrl, 4);
+        const result = await replicateService.removeBg(photoUrl);
         const processingTime = Date.now() - startTime;
 
         storage.updateGenerationStatus(
@@ -46,7 +46,7 @@ export async function processEnhance(
         } catch { }
 
         await ctx.replyWithPhoto(result, {
-            caption: `✨ *Улучшено в 4x*\n⏱ ${(processingTime / 1000).toFixed(1)} сек | Real-ESRGAN`,
+            caption: `🪄 *Фон удалён*\n⏱ ${(processingTime / 1000).toFixed(1)} сек | bria/remove-background`,
             parse_mode: "Markdown",
         });
     } catch (err) {
@@ -56,10 +56,10 @@ export async function processEnhance(
             await ctx.api.editMessageText(
                 ctx.chat!.id,
                 progressMsg.message_id,
-                `❌ Ошибка улучшения: ${errorMsg}`
+                `❌ Ошибка: ${errorMsg}`
             );
         } catch {
-            await ctx.reply(`❌ Ошибка улучшения: ${errorMsg}`);
+            await ctx.reply(`❌ Ошибка: ${errorMsg}`);
         }
     }
 }
