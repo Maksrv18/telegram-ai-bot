@@ -35,6 +35,7 @@ export interface User {
     username: string | null;
     first_name: string | null;
     is_premium: number;
+    stars_balance: number;
     requests_today: number;
     requests_this_hour: number;
     requests_total: number;
@@ -114,6 +115,38 @@ export function resetDailyCount(telegramId: number): void {
     db.prepare(
         "UPDATE users SET requests_today = 0, last_day_reset = CURRENT_TIMESTAMP WHERE telegram_id = ?"
     ).run(telegramId);
+}
+
+// --- Payment & Balance operations ---
+
+export function getUserBalance(telegramId: number): number {
+    const user = db.prepare("SELECT stars_balance FROM users WHERE telegram_id = ?").get(telegramId) as { stars_balance: number } | undefined;
+    return user ? user.stars_balance : 0;
+}
+
+export function deductStar(telegramId: number): boolean {
+    const result = db.prepare(
+        "UPDATE users SET stars_balance = stars_balance - 1 WHERE telegram_id = ? AND stars_balance > 0"
+    ).run(telegramId);
+    return result.changes > 0;
+}
+
+export function addStars(telegramId: number, amount: number): void {
+    db.prepare(
+        "UPDATE users SET stars_balance = stars_balance + ? WHERE telegram_id = ?"
+    ).run(amount, telegramId);
+}
+
+export function recordPayment(telegramId: number, chargeId: string, amount: number): boolean {
+    try {
+        db.prepare(
+            "INSERT INTO payments (telegram_id, charge_id, amount) VALUES (?, ?, ?)"
+        ).run(telegramId, chargeId, amount);
+        return true;
+    } catch (e) {
+        // Likely a unique constraint violation on charge_id
+        return false;
+    }
 }
 
 // --- Generation operations ---

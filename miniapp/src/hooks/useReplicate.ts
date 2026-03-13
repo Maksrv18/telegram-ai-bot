@@ -5,7 +5,7 @@ import { useTelegram } from './useTelegram'
 const api = axios.create({ baseURL: '/api' })
 
 export interface GenerateOptions {
-    type: 'image' | 'video' | 'tts' | 'removebg' | 'videotranslate' | 'chat' | 'gemini_chat'
+    type: 'image' | 'video' | 'tts' | 'removebg' | 'videotranslate' | 'chat' | 'gemini_chat' | 'upscale'
     prompt?: string
     model?: string
     imageUrl?: string
@@ -54,8 +54,45 @@ export function useReplicate() {
             const headers: Record<string, string> = {}
             if (initData) headers['x-telegram-init-data'] = initData
 
-            const { data } = await api.post('/generate', options, { headers })
-            const generationId = data.generationId
+            let responseData;
+
+            try {
+                const res = await api.post('/generate', options, { headers })
+                responseData = res.data;
+            } catch (err: any) {
+                if (err.response?.status === 402 && err.response?.data?.requirePayment) {
+                    // Try to generate invoice and pay
+                    try {
+                        const invoiceRes = await api.post('/invoice', {}, { headers });
+                        const link = invoiceRes.data.invoiceLink;
+
+                        const tg = window.Telegram?.WebApp;
+                        if (tg?.openInvoice) {
+                            const paymentStatus = await new Promise((resolve) => {
+                                tg.openInvoice(link, (status: string) => resolve(status));
+                            });
+
+                            if (paymentStatus === 'paid') {
+                                // Wait a tiny bit for webhook to process the balance
+                                await new Promise(r => setTimeout(r, 1500));
+                                // Retry generate
+                                const retryRes = await api.post('/generate', options, { headers })
+                                responseData = retryRes.data;
+                            } else {
+                                throw new Error('Оплата отменена');
+                            }
+                        } else {
+                            throw new Error('Telegram WebApp API недоступен');
+                        }
+                    } catch (paymentErr: any) {
+                        throw new Error(paymentErr.message || 'Ошибка оплаты');
+                    }
+                } else {
+                    throw err; // Re-throw any non-402 errors
+                }
+            }
+
+            const generationId = responseData.generationId
 
             let gen: GenerationResult | null = null
             let attempts = 0
@@ -75,8 +112,8 @@ export function useReplicate() {
             setResult(gen)
             setLoading(false)
             return gen
-        } catch (err) {
-            const message = err instanceof Error ? err.message : 'Unknown error'
+        } catch (err: any) {
+            const message = err.response?.data?.error || err instanceof Error ? err.message : 'Unknown error'
             setError(message)
             setLoading(false)
             return null

@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { ArrowLeft, Image, Video, Sparkles, Wand2, MessageCircle } from 'lucide-react'
+import { Image, Video, Sparkles, Wand2, MessageCircle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useHistory } from '../hooks/useHistory'
 
@@ -19,12 +19,6 @@ export default function History() {
         <div className="min-h-screen pb-20 px-4 pt-6 relative z-10">
             {/* Header */}
             <div className="flex items-center gap-3 mb-6">
-                <button
-                    onClick={() => navigate('/')}
-                    className="w-10 h-10 rounded-xl bg-bg-card border border-accent-primary/20 flex items-center justify-center text-txt-secondary"
-                >
-                    <ArrowLeft size={20} />
-                </button>
                 <div>
                     <h1 className="font-heading text-xl font-bold text-txt-primary">🕐 History</h1>
                     <p className="text-txt-muted text-xs">Ваши генерации</p>

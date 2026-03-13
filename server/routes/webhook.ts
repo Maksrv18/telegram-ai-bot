@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import { InputMediaPhoto } from "grammy/types";
 
-let botInstance: any = null;
+export let botInstance: any = null;
 
 export function setBotInstance(bot: any): void {
     botInstance = bot;

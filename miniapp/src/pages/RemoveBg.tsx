@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Upload, Download, Send } from 'lucide-react'
+import { Upload, Download, Send } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import LoadingSpinner from '../components/LoadingSpinner'
 import { useReplicate } from '../hooks/useReplicate'
@@ -48,9 +48,6 @@ export default function RemoveBg() {
     return (
         <div className="min-h-screen pb-24 px-4 pt-6 relative z-10">
             <div className="flex items-center gap-3 mb-6">
-                <button onClick={() => navigate('/')} className="w-10 h-10 rounded-xl bg-bg-card border border-accent-primary/20 flex items-center justify-center text-txt-secondary">
-                    <ArrowLeft size={20} />
-                </button>
                 <div>
                     <h1 className="font-heading text-xl font-bold text-txt-primary">🪄 Remove Background</h1>
                     <p className="text-txt-muted text-xs">bria/remove-background</p>

@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { validateTelegramWebAppData, parseTelegramUser } from "../services/telegramService";
 import { replicateService } from "../services/replicateService";
 import * as storage from "../../bot/utils/storage";
+import { botInstance } from "./webhook";
 
 const router = Router();
 
@@ -30,6 +31,48 @@ function authMiddleware(req: Request, res: Response, next: Function): void {
     next();
 }
 
+// ─── GET /api/balance ─────────────────────────────────────────────────────────
+router.get("/balance", authMiddleware, (req: Request, res: Response) => {
+    try {
+        const user = (req as any).telegramUser;
+        const balance = storage.getUserBalance(user.id);
+        res.json({ balance });
+    } catch (err) {
+        res.status(500).json({ error: "Failed to get balance" });
+    }
+});
+
+// ─── POST /api/invoice ────────────────────────────────────────────────────────
+router.post("/invoice", authMiddleware, async (req: Request, res: Response) => {
+    try {
+        const user = (req as any).telegramUser;
+        if (!botInstance) {
+            res.status(500).json({ error: "Bot not available" });
+            return;
+        }
+
+        const title = "Генерация AI";
+        const description = "Оплата 1 генерации нейросети (1 ⭐️)";
+        const payload = `gen_payment_${user.id}_${Date.now()}`;
+        const currency = "XTR";
+        const prices = [{ label: "1 Генерация", amount: 1 }];
+
+        const invoiceLink = await botInstance.api.createInvoiceLink(
+            title,
+            description,
+            payload,
+            "", // provider_token (empty for Telegram Stars)
+            currency,
+            prices
+        );
+
+        res.json({ invoiceLink });
+    } catch (err) {
+        console.error("Invoice generation error:", err);
+        res.status(500).json({ error: "Failed to create invoice" });
+    }
+});
+
 // ─── POST /api/generate ───────────────────────────────────────────────────────
 router.post("/generate", authMiddleware, async (req: Request, res: Response) => {
     try {
@@ -37,6 +80,19 @@ router.post("/generate", authMiddleware, async (req: Request, res: Response) => 
         const user = (req as any).telegramUser;
 
         storage.getOrCreateUser(user.id, user.username, user.first_name);
+
+        const currentBalance = storage.getUserBalance(user.id);
+        if (currentBalance < 1) {
+            res.status(402).json({ error: "Insufficient Stars", requirePayment: true });
+            return;
+        }
+
+        // Deduct star
+        const success = storage.deductStar(user.id);
+        if (!success) {
+            res.status(402).json({ error: "Failed to deduct star" });
+            return;
+        }
 
         const genId = storage.createGeneration({
             userId: user.id,
@@ -46,7 +102,7 @@ router.post("/generate", authMiddleware, async (req: Request, res: Response) => 
             inputUrl: imageUrl || videoUrl,
         });
 
-        processGeneration(genId, type, {
+        processGeneration(genId, user.id, type, {
             prompt,
             model,
             imageUrl,
@@ -192,6 +248,7 @@ router.get("/models", (_req: Request, res: Response) => {
 // ─── Background processing ────────────────────────────────────────────────────
 async function processGeneration(
     genId: number,
+    userId: number,
     type: string,
     params: Record<string, any>
 ): Promise<void> {
@@ -257,6 +314,17 @@ async function processGeneration(
         const processingTime = Date.now() - startTime;
         const errorMessage = err instanceof Error ? err.message : String(err);
         storage.updateGenerationStatus(genId, "failed", undefined, errorMessage, processingTime);
+
+        // Auto refund User for failed generation
+        try {
+            storage.addStars(userId, 1);
+            if (botInstance) {
+                // Try to find the latest payment attempt for this user or use a general message to notify them
+                await botInstance.api.sendMessage(userId, "⚠️ Ошибка при генерации. 1 ⭐️ была возвращена на ваш баланс.");
+            }
+        } catch (refundErr) {
+            console.error("Auto-refund error:", refundErr);
+        }
     }
 }
 

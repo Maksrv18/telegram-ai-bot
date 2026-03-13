@@ -49,18 +49,44 @@ export function createBot(): Bot<BotContext> {
 
     // Commands
     bot.command("start", handleStart);
-    bot.command("generate", handleGenerate);
+    bot.command("image", handleGenerate);
     bot.command("enhance", handleEnhance);
     bot.command("removebg", handleRemoveBg);
     bot.command("video", handleVideo);
 
-    bot.command("ask", async (ctx) => {
+    // --- Payment Handlers ---
+    bot.on("pre_checkout_query", async (ctx) => {
+        // Approve all checkouts from our bot
+        await ctx.answerPreCheckoutQuery(true);
+    });
+
+    bot.on("message:successful_payment", async (ctx) => {
+        const payment = ctx.message.successful_payment;
+        if (!payment) return;
+
+        const telegramId = ctx.from.id;
+        const amount = payment.total_amount; // 1 Star
+        const chargeId = payment.telegram_payment_charge_id;
+
+        // Ensure user exists
+        storage.getOrCreateUser(telegramId, ctx.from.username, ctx.from.first_name);
+
+        // Record payment. If it's a duplicate webhook, recordPayment will return false
+        const recorded = storage.recordPayment(telegramId, chargeId, amount);
+
+        if (recorded) {
+            storage.addStars(telegramId, amount);
+            await ctx.reply(`✅ Оплата успешно прошла! На ваш баланс зачислена 1 ⭐️.`);
+        }
+    });
+
+    bot.command("chat", async (ctx) => {
         const text = ctx.message?.text || "";
-        const question = text.replace(/^\/ask\s*/i, "").trim();
+        const question = text.replace(/^\/chat\s*/i, "").trim();
 
         if (!question) {
             await ctx.reply(
-                "💬 *AI Chat*\n\nОтправь вопрос после команды:\n`/ask Что такое нейросеть?`",
+                "💬 *AI Chat*\n\nОтправь вопрос после команды:\n`/chat Что такое нейросеть?`",
                 { parse_mode: "Markdown" }
             );
             return;
@@ -125,11 +151,11 @@ export function createBot(): Bot<BotContext> {
     bot.command("help", async (ctx) => {
         await ctx.reply(
             "📖 *Команды бота:*\n\n" +
-            "🎨 `/generate <промт>` — Генерация изображения\n" +
+            "🎨 `/image <промт>` — Генерация изображения\n" +
             "✨ `/enhance` — Улучшить фото \\(отправьте фото\\)\n" +
             "🪄 `/removebg` — Убрать фон \\(отправьте фото\\)\n" +
             "🎬 `/video <описание>` — Генерация видео\n" +
-            "💬 `/ask <вопрос>` — Спросить AI\n" +
+            "💬 `/chat <вопрос>` — Спросить AI\n" +
             "📊 `/history` — История генераций\n\n" +
             "Или просто отправьте фото для выбора действия\\!",
             { parse_mode: "MarkdownV2" }
@@ -190,7 +216,7 @@ export function createBot(): Bot<BotContext> {
         // Menu handlers
         if (data === "menu_generate") {
             await ctx.reply(
-                "🎨 Отправьте промт:\n`/generate ваше описание`",
+                "🎨 Отправьте промт:\n`/image ваше описание`",
                 { parse_mode: "Markdown" }
             );
         } else if (data === "menu_enhance") {
@@ -217,11 +243,11 @@ export function startBot(bot: Bot<BotContext>): void {
     // Set commands menu
     bot.api.setMyCommands([
         { command: "start", description: "🚀 Начать" },
-        { command: "generate", description: "🎨 Генерация изображения" },
+        { command: "image", description: "🎨 Генерация изображения" },
         { command: "enhance", description: "✨ Улучшить фото" },
         { command: "removebg", description: "🪄 Убрать фон" },
         { command: "video", description: "🎬 Генерация видео" },
-        { command: "ask", description: "💬 Спросить AI" },
+        { command: "chat", description: "💬 Спросить AI" },
         { command: "history", description: "📊 История" },
         { command: "help", description: "📖 Помощь" },
     ]);

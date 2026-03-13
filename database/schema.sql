@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
   username TEXT,
   first_name TEXT,
   is_premium BOOLEAN DEFAULT 0,
+  stars_balance INTEGER DEFAULT 0,
   requests_today INTEGER DEFAULT 0,
   requests_this_hour INTEGER DEFAULT 0,
   requests_total INTEGER DEFAULT 0,
@@ -42,3 +43,11 @@ CREATE INDEX IF NOT EXISTS idx_generations_user ON generations(user_id);
 CREATE INDEX IF NOT EXISTS idx_generations_status ON generations(status);
 CREATE INDEX IF NOT EXISTS idx_generations_created ON generations(created_at);
 CREATE INDEX IF NOT EXISTS idx_users_telegram_id ON users(telegram_id);
+
+CREATE TABLE IF NOT EXISTS payments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  telegram_id INTEGER REFERENCES users(telegram_id),
+  charge_id TEXT UNIQUE NOT NULL,
+  amount INTEGER NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);

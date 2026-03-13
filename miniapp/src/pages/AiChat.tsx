@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Send, Copy, Check, MessageCircle } from 'lucide-react'
+import { Send, Copy, Check, MessageCircle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import ParamPanel from '../components/ParamPanel'
 import { useReplicate, GenerationResult } from '../hooks/useReplicate'
@@ -69,9 +69,6 @@ export default function AiChat() {
         <div className="min-h-screen flex flex-col pb-24 relative z-10">
             {/* Header */}
             <div className="flex items-center gap-3 px-4 pt-6 pb-4">
-                <button onClick={() => navigate('/')} className="w-10 h-10 rounded-xl bg-bg-card border border-accent-primary/20 flex items-center justify-center text-txt-secondary">
-                    <ArrowLeft size={20} />
-                </button>
                 <div>
                     <h1 className="font-heading text-xl font-bold text-txt-primary">💬 AI Chat</h1>
                     <p className="text-txt-muted text-xs">google/gemini-3-flash</p>

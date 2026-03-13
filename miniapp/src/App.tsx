@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { useEffect } from 'react'
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import BottomNav from './components/BottomNav'
 import Home from './pages/Home'
@@ -9,6 +10,34 @@ import TextToSpeech from './pages/TextToSpeech'
 import VideoTranslate from './pages/VideoTranslate'
 import AiChat from './pages/AiChat'
 import History from './pages/History'
+
+function BackButtonHandler() {
+    const location = useLocation()
+    const navigate = useNavigate()
+
+    useEffect(() => {
+        const tg = window.Telegram?.WebApp
+        if (!tg?.BackButton) return
+
+        if (location.pathname === '/') {
+            tg.BackButton.hide()
+        } else {
+            tg.BackButton.show()
+        }
+
+        const handleBack = () => {
+            navigate(-1)
+        }
+
+        tg.onEvent('backButtonClicked', handleBack)
+
+        return () => {
+            tg.offEvent('backButtonClicked', handleBack)
+        }
+    }, [location.pathname, navigate])
+
+    return null
+}
 
 export default function App() {
     return (
@@ -23,6 +52,7 @@ export default function App() {
 
                 {/* Main content */}
                 <main className="relative z-10">
+                    <BackButtonHandler />
                     <Routes>
                         <Route path="/" element={<Home />} />
                         <Route path="/image" element={<ImageGen />} />

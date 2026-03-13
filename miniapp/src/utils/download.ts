@@ -1,17 +1,6 @@
 export const downloadImage = async (url: string, filename: string = 'file') => {
-    try {
-        const downloadUrl = `/api/download?url=${encodeURIComponent(url)}`;
-        const a = document.createElement('a');
-        a.href = downloadUrl;
-        a.download = filename;
-        a.target = '_blank';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-    } catch {
-        // Fallback: open in new tab
-        window.open(url, '_blank');
-    }
+    // Revert to opening native url in browser as per user request
+    window.open(url, '_blank');
 };
 
 export const copyText = async (text: string): Promise<boolean> => {
