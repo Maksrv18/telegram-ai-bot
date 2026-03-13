@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowLeft, Download, Send } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
@@ -8,7 +8,7 @@ import ImageCard from '../components/ImageCard'
 import ParamPanel from '../components/ParamPanel'
 import { useReplicate } from '../hooks/useReplicate'
 import { useTelegram } from '../hooks/useTelegram'
-
+import { downloadImage, sendToTelegramChat } from '../utils/download'
 const MODEL_PARAMS = [
     { key: 'aspectRatio', label: 'Соотношение сторон', type: 'select' as const, options: ['1:1', '16:9', '9:16', '4:3', '3:4'], default: '1:1' },
     { key: 'negativePrompt', label: 'Исключить (Negative Prompt)', type: 'textarea' as const, placeholder: 'плохое качество, деформированные руки...' },
@@ -31,10 +31,25 @@ export default function ImageGen() {
         if (!prompt.trim()) return
         hapticFeedback('heavy')
         const interval = setInterval(() => setProgressIdx(i => (i + 1) % progress.length), 3000)
-        await generate({ type: 'image', prompt: prompt.trim(), ...params })
-        clearInterval(interval)
-        hapticFeedback('medium')
+
+        try {
+            await generate({ type: 'image', prompt: prompt.trim(), ...params })
+        } finally {
+            clearInterval(interval)
+            hapticFeedback('medium')
+        }
     }
+
+    // Auto-send to chat when result comes in
+    const sentRef = useRef(false)
+
+    useEffect(() => {
+        if (result?.output_urls?.[0] && !sentRef.current) {
+            sentRef.current = true
+            sendToTelegramChat('image', { url: result.output_urls[0], prompt })
+        }
+        if (!result) sentRef.current = false
+    }, [result, prompt])
 
     return (
         <div className="min-h-screen pb-24 px-4 pt-6 relative z-10">

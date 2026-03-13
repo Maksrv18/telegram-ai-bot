@@ -74,7 +74,12 @@ export default function History() {
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: i * 0.05 }}
-                                className="glass-card p-3 flex gap-3"
+                                onClick={() => {
+                                    if (item.output_urls && item.output_urls[0]) {
+                                        window.open(item.output_urls[0], '_blank')
+                                    }
+                                }}
+                                className="glass-card p-3 flex gap-3 cursor-pointer hover:bg-white/5 transition-colors"
                             >
                                 {/* Thumbnail */}
                                 {item.output_urls && item.output_urls[0] && item.type !== 'chat' ? (

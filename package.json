@@ -13,25 +13,26 @@
     "test:models": "npx ts-node scripts/testModels.ts"
   },
   "dependencies": {
-    "grammy": "^1.30.0",
-    "replicate": "^0.34.0",
-    "express": "^4.21.0",
-    "cors": "^2.8.5",
+    "axios": "^1.7.0",
     "better-sqlite3": "^11.0.0",
-    "zod": "^3.23.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.0",
+    "express": "^4.21.0",
+    "grammy": "^1.30.0",
     "pino": "^9.0.0",
     "pino-pretty": "^11.0.0",
-    "dotenv": "^16.4.0",
-    "axios": "^1.7.0"
+    "replicate": "^0.34.0",
+    "zod": "^3.23.0"
   },
   "devDependencies": {
-    "typescript": "^5.6.0",
-    "ts-node": "^10.9.0",
-    "nodemon": "^3.1.0",
-    "concurrently": "^9.0.0",
-    "@types/express": "^5.0.0",
     "@types/better-sqlite3": "^7.6.0",
     "@types/cors": "^2.8.17",
-    "@types/node": "^22.0.0"
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.0.0",
+    "@types/node-fetch": "^2.6.13",
+    "concurrently": "^9.0.0",
+    "nodemon": "^3.1.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.6.0"
   }
 }

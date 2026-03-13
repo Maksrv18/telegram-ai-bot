@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowLeft, Upload, Download, Send } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
@@ -25,9 +25,23 @@ export default function RemoveBg() {
     const handleRemoveBg = async () => {
         if (!preview) return
         hapticFeedback('heavy')
-        await generate({ type: 'removebg', imageUrl: preview })
-        hapticFeedback('medium')
+        try {
+            await generate({ type: 'removebg', imageUrl: preview })
+        } finally {
+            hapticFeedback('medium')
+        }
     }
+
+    // Auto-send to chat when result comes in
+    const sentRef = useRef(false)
+
+    useEffect(() => {
+        if (result?.output_urls?.[0] && !sentRef.current) {
+            sentRef.current = true
+            sendToTelegramChat('image', { url: result.output_urls[0] })
+        }
+        if (!result) sentRef.current = false
+    }, [result])
 
     const outputUrl = result?.output_urls?.[0]
 

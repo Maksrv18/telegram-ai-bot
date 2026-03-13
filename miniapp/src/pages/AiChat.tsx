@@ -44,8 +44,12 @@ export default function AiChat() {
         hapticFeedback('light')
 
         if (result?.output_urls?.[0]) {
-            const aiMsg: Message = { role: 'ai', text: result.output_urls[0], id: ++idRef.current }
+            const aiText = result.output_urls[0]
+            const aiMsg: Message = { role: 'ai', text: aiText, id: ++idRef.current }
             setMessages(prev => [...prev, aiMsg])
+
+            // Auto-send AI response to chat
+            sendToTelegramChat('text', { text: `Вопрос: ${prompt}\n\nОтвет: ${aiText}` })
         }
     }
 

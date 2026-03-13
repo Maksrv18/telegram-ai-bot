@@ -6,6 +6,7 @@ dotenv.config({ path: path.resolve(__dirname, "../.env") });
 import express from "express";
 import cors from "cors";
 import apiRoutes from "./routes/api";
+import downloadRoutes from "./routes/download";
 import webhookRoutes, { setBotInstance } from "./routes/webhook";
 import { createBot, startBot } from "../bot/index";
 
@@ -18,6 +19,7 @@ app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 // API Routes
+app.use("/api/download", downloadRoutes);
 app.use("/api", apiRoutes);
 
 // Webhook route (for production)

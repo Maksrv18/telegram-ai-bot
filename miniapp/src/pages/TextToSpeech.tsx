@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowLeft, Download, Send, Play, Square } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
@@ -27,9 +27,23 @@ export default function TextToSpeech() {
     const handleGenerate = async () => {
         if (!text.trim()) return
         hapticFeedback('heavy')
-        await generate({ type: 'tts', prompt: text.trim(), ...params })
-        hapticFeedback('medium')
+        try {
+            await generate({ type: 'tts', prompt: text.trim(), ...params })
+        } finally {
+            hapticFeedback('medium')
+        }
     }
+
+    // Auto-send to chat when result comes in
+    const sentRef = useRef(false)
+
+    useEffect(() => {
+        if (result?.output_urls?.[0] && !sentRef.current) {
+            sentRef.current = true
+            sendToTelegramChat('audio', { url: result.output_urls[0], prompt: text })
+        }
+        if (!result) sentRef.current = false
+    }, [result, text])
 
     const togglePlay = (url: string) => {
         if (playing && audioEl) {

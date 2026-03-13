@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowLeft, Download, Send } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
@@ -26,9 +26,23 @@ export default function VideoGen() {
     const handleGenerate = async () => {
         if (!prompt.trim()) return
         hapticFeedback('heavy')
-        await generate({ type: 'video', prompt: prompt.trim(), ...params })
-        hapticFeedback('medium')
+        try {
+            await generate({ type: 'video', prompt: prompt.trim(), ...params })
+        } finally {
+            hapticFeedback('medium')
+        }
     }
+
+    // Auto-send to chat when result comes in
+    const sentRef = useRef(false)
+
+    useEffect(() => {
+        if (result?.output_urls?.[0] && !sentRef.current) {
+            sentRef.current = true
+            sendToTelegramChat('video', { url: result.output_urls[0], prompt })
+        }
+        if (!result) sentRef.current = false
+    }, [result, prompt])
 
     const outputUrl = result?.output_urls?.[0]
 
