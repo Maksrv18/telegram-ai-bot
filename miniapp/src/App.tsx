@@ -4,13 +4,15 @@ import BottomNav from './components/BottomNav'
 import Home from './pages/Home'
 import ImageGen from './pages/ImageGen'
 import VideoGen from './pages/VideoGen'
-import Enhance from './pages/Enhance'
 import RemoveBg from './pages/RemoveBg'
+import TextToSpeech from './pages/TextToSpeech'
+import VideoTranslate from './pages/VideoTranslate'
+import AiChat from './pages/AiChat'
 import History from './pages/History'
 
 export default function App() {
     return (
-        <BrowserRouter>
+        <BrowserRouter basename="/miniapp">
             <div className="min-h-screen bg-bg-primary text-txt-primary font-body relative">
                 {/* Animated background orbs */}
                 <div className="bg-orbs">
@@ -25,8 +27,10 @@ export default function App() {
                         <Route path="/" element={<Home />} />
                         <Route path="/image" element={<ImageGen />} />
                         <Route path="/video" element={<VideoGen />} />
-                        <Route path="/enhance" element={<Enhance />} />
                         <Route path="/removebg" element={<RemoveBg />} />
+                        <Route path="/tts" element={<TextToSpeech />} />
+                        <Route path="/videotranslate" element={<VideoTranslate />} />
+                        <Route path="/chat" element={<AiChat />} />
                         <Route path="/history" element={<History />} />
                     </Routes>
                 </main>

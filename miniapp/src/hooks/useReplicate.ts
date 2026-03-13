@@ -2,21 +2,31 @@ import { useState, useCallback } from 'react'
 import axios from 'axios'
 import { useTelegram } from './useTelegram'
 
-const api = axios.create({
-    baseURL: '/api',
-})
+const api = axios.create({ baseURL: '/api' })
 
-interface GenerateOptions {
-    type: 'image' | 'video' | 'upscale' | 'removebg' | 'chat'
+export interface GenerateOptions {
+    type: 'image' | 'video' | 'tts' | 'removebg' | 'videotranslate' | 'chat' | 'gemini_chat'
     prompt?: string
     model?: string
     imageUrl?: string
+    videoUrl?: string
     aspectRatio?: string
     numOutputs?: number
-    scale?: number
+    targetLanguage?: string
+    // Extra model params
+    negativePrompt?: string
+    guidanceScale?: number
+    duration?: number
+    voice?: string
+    speed?: number
+    speakerGender?: string
+    systemPrompt?: string
+    temperature?: number
+    maxTokens?: number
+    options?: Record<string, any>
 }
 
-interface GenerationResult {
+export interface GenerationResult {
     id: number
     user_id: number
     type: string
@@ -42,35 +52,25 @@ export function useReplicate() {
 
         try {
             const headers: Record<string, string> = {}
-            if (initData) {
-                headers['x-telegram-init-data'] = initData
-            }
+            if (initData) headers['x-telegram-init-data'] = initData
 
-            // Start generation
             const { data } = await api.post('/generate', options, { headers })
             const generationId = data.generationId
 
-            // Poll for result
             let gen: GenerationResult | null = null
             let attempts = 0
-            const maxAttempts = 120 // 4 minutes max
+            const maxAttempts = 150 // 5 minutes
 
             while (attempts < maxAttempts) {
                 await new Promise(resolve => setTimeout(resolve, 2000))
                 const { data: status } = await api.get(`/generation/${generationId}`, { headers })
 
-                if (status.status === 'done') {
-                    gen = status
-                    break
-                } else if (status.status === 'failed') {
-                    throw new Error(status.error_message || 'Generation failed')
-                }
+                if (status.status === 'done') { gen = status; break }
+                else if (status.status === 'failed') throw new Error(status.error_message || 'Generation failed')
                 attempts++
             }
 
-            if (!gen) {
-                throw new Error('Generation timed out')
-            }
+            if (!gen) throw new Error('Generation timed out')
 
             setResult(gen)
             setLoading(false)
@@ -83,26 +83,18 @@ export function useReplicate() {
         }
     }, [initData])
 
-    const reset = useCallback(() => {
-        setLoading(false)
-        setError(null)
-        setResult(null)
-    }, [])
+    const reset = useCallback(() => { setLoading(false); setError(null); setResult(null) }, [])
 
     return { generate, loading, error, result, reset }
 }
 
 export function useModels() {
     const [models, setModels] = useState<any>(null)
-
     const fetchModels = useCallback(async () => {
         try {
             const { data } = await api.get('/models')
             setModels(data)
-        } catch {
-            console.error('Failed to fetch models')
-        }
+        } catch { console.error('Failed to fetch models') }
     }, [])
-
     return { models, fetchModels }
 }

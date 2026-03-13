@@ -1,166 +1,78 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Download, Send } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import PromptInput from '../components/PromptInput'
-import ModelSelector from '../components/ModelSelector'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ImageCard from '../components/ImageCard'
+import ParamPanel from '../components/ParamPanel'
 import { useReplicate } from '../hooks/useReplicate'
 import { useTelegram } from '../hooks/useTelegram'
 
-const models = [
-    { id: 'flux_schnell', name: 'FLUX Schnell', emoji: '⚡' },
-    { id: 'flux_dev', name: 'FLUX Dev', emoji: '🎯' },
-    { id: 'sdxl', name: 'SDXL', emoji: '🖼️' },
+const MODEL_PARAMS = [
+    { key: 'aspectRatio', label: 'Соотношение сторон', type: 'select' as const, options: ['1:1', '16:9', '9:16', '4:3', '3:4'], default: '1:1' },
+    { key: 'negativePrompt', label: 'Исключить (Negative Prompt)', type: 'textarea' as const, placeholder: 'плохое качество, деформированные руки...' },
+    { key: 'guidanceScale', label: 'Guidance Scale', type: 'slider' as const, min: 1, max: 20, default: 7, step: 0.5 },
 ]
 
-const aspects = ['1:1', '16:9', '9:16', '4:3']
-
-const progressMessages = [
-    '🎨 Запускаю нейросеть...',
-    '⚡ Обрабатываю запрос...',
-    '🖌️ Рисую пиксели...',
-    '✨ Почти готово...',
-    '🔮 Финальные штрихи...',
-]
+const progress = ['🎨 Запускаю нейросеть...', '⚡ Обрабатываю запрос...', '🖌️ Рисую пиксели...', '✨ Финальные штрихи...']
 
 export default function ImageGen() {
     const navigate = useNavigate()
     const { hapticFeedback } = useTelegram()
     const { generate, loading, error, result, reset } = useReplicate()
     const [prompt, setPrompt] = useState('')
-    const [model, setModel] = useState('flux_schnell')
-    const [aspect, setAspect] = useState('1:1')
+    const [params, setParams] = useState<Record<string, any>>({ aspectRatio: '1:1', guidanceScale: 7 })
     const [progressIdx, setProgressIdx] = useState(0)
+
+    const setParam = (key: string, val: any) => setParams(p => ({ ...p, [key]: val }))
 
     const handleGenerate = async () => {
         if (!prompt.trim()) return
         hapticFeedback('heavy')
-
-        // Start progress animation
-        const interval = setInterval(() => {
-            setProgressIdx(prev => (prev + 1) % progressMessages.length)
-        }, 3000)
-
-        await generate({
-            type: 'image',
-            prompt: prompt.trim(),
-            model,
-            aspectRatio: aspect,
-            numOutputs: 1,
-        })
-
+        const interval = setInterval(() => setProgressIdx(i => (i + 1) % progress.length), 3000)
+        await generate({ type: 'image', prompt: prompt.trim(), ...params })
         clearInterval(interval)
         hapticFeedback('medium')
     }
 
     return (
-        <div className="min-h-screen pb-20 px-4 pt-6 relative z-10">
-            {/* Header */}
+        <div className="min-h-screen pb-24 px-4 pt-6 relative z-10">
             <div className="flex items-center gap-3 mb-6">
-                <button
-                    onClick={() => navigate('/')}
-                    className="w-10 h-10 rounded-xl bg-bg-card border border-accent-primary/20 flex items-center justify-center text-txt-secondary hover:text-txt-primary transition-colors"
-                >
+                <button onClick={() => navigate('/')} className="w-10 h-10 rounded-xl bg-bg-card border border-accent-primary/20 flex items-center justify-center text-txt-secondary">
                     <ArrowLeft size={20} />
                 </button>
                 <div>
-                    <h1 className="font-heading text-xl font-bold text-txt-primary">🎨 Image Gen</h1>
-                    <p className="text-txt-muted text-xs">Генерация изображений AI</p>
+                    <h1 className="font-heading text-xl font-bold text-txt-primary">🎨 Image Generation</h1>
+                    <p className="text-txt-muted text-xs">google/nano-banana-pro</p>
                 </div>
             </div>
 
-            {/* Model Selector */}
             <div className="mb-4">
-                <ModelSelector models={models} selected={model} onChange={setModel} />
+                <PromptInput value={prompt} onChange={setPrompt} placeholder="Киберпанк кот на неоновой улице под дождём..." />
             </div>
 
-            {/* Prompt Input */}
-            <div className="mb-4">
-                <PromptInput
-                    value={prompt}
-                    onChange={setPrompt}
-                    placeholder="a cyberpunk cat riding a neon motorcycle through rain..."
-                />
-            </div>
+            <ParamPanel params={MODEL_PARAMS} values={params} onChange={setParam} />
 
-            {/* Aspect Ratio */}
-            <div className="mb-6">
-                <p className="text-txt-secondary text-xs font-medium mb-2">Соотношение сторон</p>
-                <div className="flex gap-2">
-                    {aspects.map(a => (
-                        <button
-                            key={a}
-                            onClick={() => {
-                                hapticFeedback('light')
-                                setAspect(a)
-                            }}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${aspect === a
-                                    ? 'bg-accent-primary text-white'
-                                    : 'bg-bg-card border border-accent-primary/20 text-txt-secondary'
-                                }`}
-                        >
-                            {a}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {/* Generate Button */}
-            <button
-                onClick={handleGenerate}
-                disabled={loading || !prompt.trim()}
-                className="btn-generate mb-6"
-            >
+            <button onClick={handleGenerate} disabled={loading || !prompt.trim()} className="btn-generate mb-6">
                 {loading ? '⏳ Генерация...' : '🚀 Сгенерировать'}
             </button>
 
-            {/* Loading State */}
-            {loading && (
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                >
-                    <LoadingSpinner
-                        progress={progressMessages[progressIdx]}
-                        subtitle="Обычно занимает 5-30 секунд"
-                    />
-                </motion.div>
-            )}
+            {loading && <LoadingSpinner progress={progress[progressIdx]} subtitle="Обычно 5–30 секунд" />}
 
-            {/* Error */}
             {error && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="glass-card p-4 border-accent-error/30 mb-4"
-                >
-                    <p className="text-accent-error text-sm">❌ {error}</p>
-                    <button
-                        onClick={reset}
-                        className="text-accent-primary text-sm mt-2 underline"
-                    >
-                        Попробовать снова
-                    </button>
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card p-4 border-red-500/30 mb-4">
+                    <p className="text-red-400 text-sm">❌ {error}</p>
+                    <button onClick={reset} className="text-accent-primary text-sm mt-2 underline">Попробовать снова</button>
                 </motion.div>
             )}
 
-            {/* Results */}
-            {result && result.output_urls && (
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="space-y-3"
-                >
-                    <p className="text-txt-secondary text-xs">
-                        ✅ Готово за {((result.processing_time || 0) / 1000).toFixed(1)} сек
-                    </p>
-                    <div className="grid grid-cols-1 gap-3">
-                        {result.output_urls.map((url, i) => (
-                            <ImageCard key={i} url={url} prompt={prompt} />
-                        ))}
-                    </div>
+            {result?.output_urls && (
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+                    <p className="text-txt-secondary text-xs">✅ Готово за {((result.processing_time || 0) / 1000).toFixed(1)} сек</p>
+                    {result.output_urls.map((url, i) => (
+                        <ImageCard key={i} url={url} prompt={prompt} />
+                    ))}
                 </motion.div>
             )}
         </div>

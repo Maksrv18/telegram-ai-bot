@@ -1,18 +1,14 @@
 import { Router, Request, Response } from "express";
-import {
-    validateTelegramWebAppData,
-    parseTelegramUser,
-} from "../services/telegramService";
+import { validateTelegramWebAppData, parseTelegramUser } from "../services/telegramService";
 import { replicateService } from "../services/replicateService";
 import * as storage from "../../bot/utils/storage";
 
 const router = Router();
 
-// Auth middleware for Mini App requests
+// ─── Auth middleware ──────────────────────────────────────────────────────────
 function authMiddleware(req: Request, res: Response, next: Function): void {
     const initData = req.headers["x-telegram-init-data"] as string;
 
-    // In development, allow requests without auth
     if (process.env.NODE_ENV === "development" && !initData) {
         (req as any).telegramUser = { id: 0, first_name: "Dev" };
         next();
@@ -34,28 +30,30 @@ function authMiddleware(req: Request, res: Response, next: Function): void {
     next();
 }
 
-// POST /api/generate - Start a generation
+// ─── POST /api/generate ───────────────────────────────────────────────────────
 router.post("/generate", authMiddleware, async (req: Request, res: Response) => {
     try {
-        const { type, prompt, model, imageUrl, options } = req.body;
+        const { type, prompt, model, imageUrl, videoUrl, targetLanguage, options } = req.body;
         const user = (req as any).telegramUser;
 
-        // Ensure user exists in DB
         storage.getOrCreateUser(user.id, user.username, user.first_name);
 
-        // Create generation record
         const genId = storage.createGeneration({
             userId: user.id,
             type: type || "image",
-            model: model || "flux_schnell",
+            model: model || type || "image",
             prompt,
-            inputUrl: imageUrl,
+            inputUrl: imageUrl || videoUrl,
         });
 
-        // Process in background
-        processGeneration(genId, type, { prompt, model, imageUrl, ...options }).catch(
-            (err) => console.error("Generation error:", err)
-        );
+        processGeneration(genId, type, {
+            prompt,
+            model,
+            imageUrl,
+            videoUrl,
+            targetLanguage,
+            ...options,
+        }).catch((err) => console.error("Generation error:", err));
 
         res.json({ generationId: genId, status: "processing" });
     } catch (err) {
@@ -64,22 +62,20 @@ router.post("/generate", authMiddleware, async (req: Request, res: Response) => 
     }
 });
 
-// GET /api/generation/:id - Get generation status
+// ─── GET /api/generation/:id ──────────────────────────────────────────────────
 router.get("/generation/:id", authMiddleware, (req: Request, res: Response) => {
     try {
         const id = parseInt(String(req.params.id), 10);
         const generation = storage.getGeneration(id);
 
         if (!generation) {
-            res.status(404).json({ error: "Generation not found" });
+            res.status(404).json({ error: "Not found" });
             return;
         }
 
         res.json({
             ...generation,
-            output_urls: generation.output_urls
-                ? JSON.parse(generation.output_urls)
-                : null,
+            output_urls: generation.output_urls ? JSON.parse(generation.output_urls) : null,
         });
     } catch (err) {
         console.error("API get generation error:", err);
@@ -87,91 +83,119 @@ router.get("/generation/:id", authMiddleware, (req: Request, res: Response) => {
     }
 });
 
-// GET /api/history - User's generation history
+// ─── GET /api/history ─────────────────────────────────────────────────────────
 router.get("/history", authMiddleware, (req: Request, res: Response) => {
     try {
         const user = (req as any).telegramUser;
         const limitParam = Array.isArray(req.query.limit) ? req.query.limit[0] : req.query.limit;
-        const limit = parseInt(String(limitParam || '20'), 10) || 20;
+        const limit = parseInt(String(limitParam || "20"), 10) || 20;
         const history = storage.getUserHistory(user.id, limit);
 
-        const parsed = history.map((gen) => ({
-            ...gen,
-            output_urls: gen.output_urls ? JSON.parse(gen.output_urls) : null,
-        }));
-
-        res.json(parsed);
+        res.json(
+            history.map((gen) => ({
+                ...gen,
+                output_urls: gen.output_urls ? JSON.parse(gen.output_urls) : null,
+            }))
+        );
     } catch (err) {
         console.error("API history error:", err);
         res.status(500).json({ error: "Failed to get history" });
     }
 });
 
-// GET /api/models - Available models
+// ─── GET /api/models ──────────────────────────────────────────────────────────
 router.get("/models", (_req: Request, res: Response) => {
     res.json({
         image: [
             {
-                id: "flux_schnell",
-                name: "FLUX Schnell",
-                emoji: "⚡",
-                description: "Быстрая генерация (~5 сек)",
-            },
-            {
-                id: "flux_dev",
-                name: "FLUX Dev",
-                emoji: "🎯",
-                description: "Высокое качество (~15 сек)",
-            },
-            {
-                id: "sdxl",
-                name: "SDXL",
-                emoji: "🖼️",
-                description: "Стабильная диффузия (~10 сек)",
-            },
-        ],
-        video: [
-            {
-                id: "video_01",
-                name: "Minimax Video",
-                emoji: "🎬",
-                description: "Текст в видео",
-            },
-        ],
-        upscale: [
-            {
-                id: "real_esrgan",
-                name: "Real-ESRGAN",
-                emoji: "✨",
-                description: "Улучшение до 4x",
+                id: "nano_banana_pro",
+                name: "Nano Banana Pro",
+                emoji: "🎨",
+                modelId: "google/nano-banana-pro",
+                description: "Генерация и редактирование изображений",
+                params: [
+                    { key: "negativePrompt", label: "Без чего (negative)", type: "textarea", placeholder: "деформированные руки, плохое качество..." },
+                    { key: "guidanceScale", label: "Guidance Scale", type: "slider", min: 1, max: 20, default: 7 },
+                    { key: "aspectRatio", label: "Соотношение сторон", type: "select", options: ["1:1", "16:9", "9:16", "4:3", "3:4"] },
+                ],
             },
         ],
         removebg: [
             {
-                id: "rembg",
-                name: "RemBG",
+                id: "bria_removebg",
+                name: "BRIA Remove BG",
                 emoji: "🪄",
-                description: "Удаление фона",
+                modelId: "bria/remove-background",
+                description: "Удаление фона AI",
+                params: [],
+            },
+        ],
+        video: [
+            {
+                id: "veo_fast",
+                name: "Google Veo 3.1 Fast",
+                emoji: "🎬",
+                modelId: "google/veo-3.1-fast",
+                description: "Генерация видео из текста",
+                params: [
+                    { key: "duration", label: "Длительность (сек)", type: "slider", min: 2, max: 10, default: 5 },
+                    { key: "aspectRatio", label: "Соотношение сторон", type: "select", options: ["16:9", "9:16", "1:1"] },
+                ],
+            },
+        ],
+        tts: [
+            {
+                id: "qwen_tts",
+                name: "Qwen3 TTS",
+                emoji: "🎙️",
+                modelId: "qwen/qwen3-tts",
+                description: "Голосовая озвучка текста",
+                params: [
+                    { key: "voice", label: "Голос", type: "select", options: ["alloy", "echo", "fable", "onyx", "nova", "shimmer"] },
+                    { key: "speed", label: "Скорость", type: "slider", min: 0.5, max: 2.0, default: 1.0, step: 0.1 },
+                ],
+            },
+        ],
+        videotranslate: [
+            {
+                id: "heygen_translate",
+                name: "HeyGen Video Translate",
+                emoji: "🌐",
+                modelId: "heygen/video-translate",
+                description: "Перевод видео с сохранением голоса",
+                params: [
+                    {
+                        key: "targetLanguage", label: "Язык перевода", type: "select",
+                        options: ["Russian", "English", "Spanish", "French", "German", "Chinese", "Japanese", "Arabic", "Portuguese"],
+                    },
+                    { key: "speakerGender", label: "Пол спикера", type: "select", options: ["male", "female"] },
+                ],
+            },
+        ],
+        chat: [
+            {
+                id: "gemini_flash",
+                name: "Gemini 3 Flash",
+                emoji: "💬",
+                modelId: "google/gemini-3-flash",
+                description: "Быстрый и умный AI-чат",
+                params: [
+                    { key: "systemPrompt", label: "Системный промпт", type: "textarea", placeholder: "You are a helpful assistant..." },
+                    { key: "temperature", label: "Температура (креативность)", type: "slider", min: 0, max: 1, default: 0.7, step: 0.1 },
+                    { key: "maxTokens", label: "Макс. токенов", type: "slider", min: 100, max: 2000, default: 800 },
+                ],
             },
         ],
     });
 });
 
-// Background processing
+// ─── Background processing ────────────────────────────────────────────────────
 async function processGeneration(
     genId: number,
     type: string,
-    params: {
-        prompt?: string;
-        model?: string;
-        imageUrl?: string;
-        aspectRatio?: string;
-        numOutputs?: number;
-        scale?: 2 | 4;
-    }
+    params: Record<string, any>
 ): Promise<void> {
     const startTime = Date.now();
-
     try {
         storage.updateGenerationStatus(genId, "processing");
         let outputUrls: string[] = [];
@@ -179,39 +203,52 @@ async function processGeneration(
         switch (type) {
             case "image":
                 outputUrls = await replicateService.generateImage(params.prompt || "", {
-                    model: (params.model as any) || "flux_schnell",
-                    aspectRatio: params.aspectRatio || "1:1",
+                    aspectRatio: params.aspectRatio,
                     numOutputs: params.numOutputs || 1,
+                    negativePrompt: params.negativePrompt,
+                    guidanceScale: params.guidanceScale,
                 });
                 break;
 
             case "removebg":
                 if (!params.imageUrl) throw new Error("Image URL required");
-                const noBg = await replicateService.removeBg(params.imageUrl);
-                outputUrls = [noBg];
-                break;
-
-            case "upscale":
-                if (!params.imageUrl) throw new Error("Image URL required");
-                const upscaled = await replicateService.upscaleImage(
-                    params.imageUrl,
-                    params.scale || 4
-                );
-                outputUrls = [upscaled];
+                outputUrls = [await replicateService.removeBg(params.imageUrl)];
                 break;
 
             case "video":
-                const video = await replicateService.generateVideo(params.prompt || "");
-                outputUrls = [video];
+                outputUrls = [await replicateService.generateVideo(params.prompt || "", {
+                    duration: params.duration,
+                    aspectRatio: params.aspectRatio,
+                })];
+                break;
+
+            case "tts":
+                outputUrls = [await replicateService.textToSpeech(params.prompt || "", {
+                    voice: params.voice,
+                    language: params.language,
+                    speed: params.speed,
+                })];
+                break;
+
+            case "videotranslate":
+                if (!params.videoUrl) throw new Error("Video URL required");
+                outputUrls = [await replicateService.translateVideo(params.videoUrl, params.targetLanguage || "Russian", {
+                    speakerGender: params.speakerGender,
+                })];
                 break;
 
             case "chat":
-                const response = await replicateService.chat(params.prompt || "");
+            case "gemini_chat":
+                const response = await replicateService.chat(params.prompt || "", {
+                    systemPrompt: params.systemPrompt,
+                    temperature: params.temperature,
+                    maxTokens: params.maxTokens,
+                });
                 outputUrls = [response];
                 break;
 
             default:
-                throw new Error(`Unknown generation type: ${type}`);
+                throw new Error(`Unknown type: ${type}`);
         }
 
         const processingTime = Date.now() - startTime;

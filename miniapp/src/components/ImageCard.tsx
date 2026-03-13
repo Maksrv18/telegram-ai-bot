@@ -1,34 +1,19 @@
-import { Download, Share2 } from 'lucide-react'
-import { useTelegram } from '../hooks/useTelegram'
-import { downloadImage } from '../utils/download'
+import { Download, Send } from 'lucide-react'
+import { downloadImage, sendToTelegramChat } from '../utils/download'
 
 interface ImageCardProps {
     url: string
     prompt?: string
-    onDownload?: () => void
+    onSendToChat?: () => void
 }
 
-export default function ImageCard({ url, prompt, onDownload }: ImageCardProps) {
-    const { hapticFeedback } = useTelegram()
-
+export default function ImageCard({ url, prompt }: ImageCardProps) {
     const handleDownload = async () => {
-        hapticFeedback('medium')
-        if (onDownload) {
-            onDownload()
-        } else {
-            await downloadImage(url, `ai-generated-${Date.now()}.png`);
-        }
+        await downloadImage(url, `ai-image-${Date.now()}.png`)
     }
 
-    const handleShare = async () => {
-        hapticFeedback('medium')
-        try {
-            if (navigator.share) {
-                await navigator.share({ url, title: prompt || 'AI Generated Image' })
-            } else {
-                await navigator.clipboard.writeText(url)
-            }
-        } catch { }
+    const handleSendToChat = () => {
+        sendToTelegramChat('image', { url, prompt })
     }
 
     return (
@@ -37,22 +22,23 @@ export default function ImageCard({ url, prompt, onDownload }: ImageCardProps) {
                 <img
                     src={url}
                     alt={prompt || 'Generated image'}
-                    className="w-full aspect-square object-cover"
+                    className="w-full object-cover"
                     loading="lazy"
                 />
-                {/* Permanent action buttons below image */}
                 <div className="absolute top-2 right-2 flex gap-2">
                     <button
-                        onClick={handleShare}
-                        className="w-8 h-8 flex items-center justify-center bg-black/50 backdrop-blur-md text-white rounded-full hover:bg-black/70 transition-colors shadow-lg"
+                        onClick={handleSendToChat}
+                        title="Отправить в чат"
+                        className="w-9 h-9 flex items-center justify-center bg-accent-primary/90 backdrop-blur-md text-white rounded-full shadow-lg active:scale-95 transition-transform"
                     >
-                        <Share2 size={14} />
+                        <Send size={15} />
                     </button>
                     <button
                         onClick={handleDownload}
-                        className="w-8 h-8 flex items-center justify-center bg-accent-primary/80 backdrop-blur-md text-white rounded-full hover:bg-accent-primary transition-colors shadow-lg"
+                        title="Скачать"
+                        className="w-9 h-9 flex items-center justify-center bg-black/60 backdrop-blur-md text-white rounded-full shadow-lg active:scale-95 transition-transform"
                     >
-                        <Download size={14} />
+                        <Download size={15} />
                     </button>
                 </div>
             </div>

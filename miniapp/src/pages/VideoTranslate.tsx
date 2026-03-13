@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowLeft, Download, Send } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import PromptInput from '../components/PromptInput'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ParamPanel from '../components/ParamPanel'
 import { useReplicate } from '../hooks/useReplicate'
@@ -10,23 +9,27 @@ import { useTelegram } from '../hooks/useTelegram'
 import { downloadImage, sendToTelegramChat } from '../utils/download'
 
 const MODEL_PARAMS = [
-    { key: 'duration', label: 'Длительность (сек)', type: 'slider' as const, min: 2, max: 10, default: 5 },
-    { key: 'aspectRatio', label: 'Соотношение сторон', type: 'select' as const, options: ['16:9', '9:16', '1:1'], default: '16:9' },
+    {
+        key: 'targetLanguage', label: 'Язык перевода', type: 'select' as const,
+        options: ['Russian', 'English', 'Spanish', 'French', 'German', 'Chinese', 'Japanese', 'Arabic', 'Portuguese'],
+        default: 'Russian'
+    },
+    { key: 'speakerGender', label: 'Пол спикера', type: 'select' as const, options: ['male', 'female'], default: 'male' },
 ]
 
-export default function VideoGen() {
+export default function VideoTranslate() {
     const navigate = useNavigate()
     const { hapticFeedback } = useTelegram()
     const { generate, loading, error, result, reset } = useReplicate()
-    const [prompt, setPrompt] = useState('')
-    const [params, setParams] = useState<Record<string, any>>({ duration: 5, aspectRatio: '16:9' })
+    const [videoUrl, setVideoUrl] = useState('')
+    const [params, setParams] = useState<Record<string, any>>({ targetLanguage: 'Russian', speakerGender: 'male' })
 
     const setParam = (key: string, val: any) => setParams(p => ({ ...p, [key]: val }))
 
-    const handleGenerate = async () => {
-        if (!prompt.trim()) return
+    const handleTranslate = async () => {
+        if (!videoUrl.trim()) return
         hapticFeedback('heavy')
-        await generate({ type: 'video', prompt: prompt.trim(), ...params })
+        await generate({ type: 'videotranslate', videoUrl: videoUrl.trim(), ...params })
         hapticFeedback('medium')
     }
 
@@ -39,26 +42,33 @@ export default function VideoGen() {
                     <ArrowLeft size={20} />
                 </button>
                 <div>
-                    <h1 className="font-heading text-xl font-bold text-txt-primary">🎬 Video Generation</h1>
-                    <p className="text-txt-muted text-xs">google/veo-3.1-fast</p>
+                    <h1 className="font-heading text-xl font-bold text-txt-primary">🌐 Video Translate</h1>
+                    <p className="text-txt-muted text-xs">heygen/video-translate</p>
                 </div>
             </div>
 
             <div className="glass-card p-3 mb-4 border-amber-500/30">
-                <p className="text-amber-400 text-xs">⏱ Генерация видео занимает 1–3 минуты</p>
+                <p className="text-amber-400 text-xs">⏱ Перевод видео занимает несколько минут</p>
             </div>
 
             <div className="mb-4">
-                <PromptInput value={prompt} onChange={setPrompt} placeholder="Кот играет джаз в баре при свечах..." />
+                <label className="text-txt-secondary text-xs font-medium block mb-2">Ссылка на видео (URL)</label>
+                <input
+                    type="url"
+                    value={videoUrl}
+                    onChange={e => setVideoUrl(e.target.value)}
+                    placeholder="https://example.com/video.mp4"
+                    className="w-full bg-bg-card border border-accent-primary/20 rounded-2xl px-4 py-3 text-txt-primary text-sm outline-none focus:border-accent-primary/50 transition-colors"
+                />
             </div>
 
             <ParamPanel params={MODEL_PARAMS} values={params} onChange={setParam} />
 
-            <button onClick={handleGenerate} disabled={loading || !prompt.trim()} className="btn-generate mb-6">
-                {loading ? '⏳ Генерация видео...' : '🎬 Создать видео'}
+            <button onClick={handleTranslate} disabled={loading || !videoUrl.trim()} className="btn-generate mb-6">
+                {loading ? '⏳ Переводю...' : '🌐 Перевести видео'}
             </button>
 
-            {loading && <LoadingSpinner progress="🎬 Генерирую видео..." subtitle="Обычно 1–3 минуты" />}
+            {loading && <LoadingSpinner progress="🌐 Перевожу видео..." subtitle="heygen/video-translate" />}
 
             {error && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card p-4 border-red-500/30 mb-4">
@@ -75,10 +85,10 @@ export default function VideoGen() {
                     </div>
                     <div className="flex gap-2">
                         <button onClick={reset} className="flex-1 py-3 rounded-xl bg-bg-card border border-accent-primary/20 text-txt-secondary text-sm">🔄 Новое</button>
-                        <button onClick={() => downloadImage(outputUrl, `video-${Date.now()}.mp4`)} className="flex-1 py-3 flex items-center justify-center gap-2 rounded-xl bg-bg-card border border-accent-primary/20 text-txt-secondary text-sm">
+                        <button onClick={() => downloadImage(outputUrl, `translated-${Date.now()}.mp4`)} className="flex-1 py-3 flex items-center justify-center gap-2 rounded-xl bg-bg-card border border-accent-primary/20 text-txt-secondary text-sm">
                             <Download size={16} /> Скачать
                         </button>
-                        <button onClick={() => sendToTelegramChat('video', { url: outputUrl, prompt })} className="flex-1 py-3 flex items-center justify-center gap-2 rounded-xl bg-accent-primary text-white text-sm">
+                        <button onClick={() => sendToTelegramChat('video', { url: outputUrl })} className="flex-1 py-3 flex items-center justify-center gap-2 rounded-xl bg-accent-primary text-white text-sm">
                             <Send size={16} /> В чат
                         </button>
                     </div>
