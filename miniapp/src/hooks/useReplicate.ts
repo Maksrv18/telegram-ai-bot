@@ -131,18 +131,23 @@ export function useReplicate() {
 
     const reset = useCallback(() => { setLoading(false); setError(null); setResult(null) }, [])
 
-    const uploadFile = useCallback(async (file: File): Promise<string | null> => {
-        const formData = new FormData()
-        formData.append('file', file)
+    const uploadFile = useCallback(async (file: File | File[]): Promise<string[] | string | null> => {
+        const files = Array.isArray(file) ? file : [file]
+        const urls: string[] = []
 
         try {
-            const { data } = await api.post('/upload', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            })
-            return data.url
+            for (const f of files) {
+                const formData = new FormData()
+                formData.append('file', f)
+                const { data } = await api.post('/upload', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                })
+                urls.push(data.url)
+            }
+            return Array.isArray(file) ? urls : urls[0]
         } catch (err: any) {
             console.error('Upload error:', err)
-            setError('Ошибка при загрузке файла')
+            setError('Ошибка при загрузке файлов')
             return null
         }
     }, [])

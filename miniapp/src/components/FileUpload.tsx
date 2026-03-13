@@ -1,48 +1,68 @@
 import React, { useRef, useState } from 'react'
-import { Upload, X, FileText, Image as ImageIcon, Film, Mic } from 'lucide-react'
+import { Upload, X, FileText, Image as ImageIcon, Film, Mic, Plus } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface FileUploadProps {
-    onFileSelect: (file: File | null) => void
+    onFilesSelect: (files: File[]) => void
     accept?: string
     label?: string
     description?: string
     type?: 'image' | 'video' | 'audio'
+    multiple?: boolean
+    maxFiles?: number
 }
 
 const FileUpload: React.FC<FileUploadProps> = ({
-    onFileSelect,
+    onFilesSelect,
     accept = "image/*",
-    label = "Загрузить файл",
+    label = "Загрузить файлы",
     description,
-    type = 'image'
+    type = 'image',
+    multiple = false,
+    maxFiles = 5
 }) => {
-    const [file, setFile] = useState<File | null>(null)
-    const [preview, setPreview] = useState<string | null>(null)
+    const [files, setFiles] = useState<File[]>([])
+    const [previews, setPreviews] = useState<string[]>([])
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const selectedFile = e.target.files?.[0]
-        if (selectedFile) {
-            setFile(selectedFile)
-            onFileSelect(selectedFile)
+        const selectedFiles = Array.from(e.target.files || [])
+        if (selectedFiles.length === 0) return
 
-            if (selectedFile.type.startsWith('image/')) {
-                const reader = new FileReader()
-                reader.onloadend = () => setPreview(reader.result as string)
-                reader.readAsDataURL(selectedFile)
-            } else {
-                setPreview(null)
-            }
+        let newFiles = multiple ? [...files, ...selectedFiles] : [selectedFiles[0]]
+        if (multiple && newFiles.length > maxFiles) {
+            newFiles = newFiles.slice(0, maxFiles)
         }
+
+        setFiles(newFiles)
+        onFilesSelect(newFiles)
+
+        // Generate previews
+        const newPreviews: string[] = []
+        newFiles.forEach(f => {
+            if (f.type.startsWith('image/')) {
+                newPreviews.push(URL.createObjectURL(f))
+            } else {
+                newPreviews.push('') // placeholder for non-images
+            }
+        })
+        setPreviews(newPreviews)
     }
 
-    const clearFile = (e: React.MouseEvent) => {
+    const removeFile = (index: number, e: React.MouseEvent) => {
         e.stopPropagation()
-        setFile(null)
-        setPreview(null)
-        onFileSelect(null)
-        if (fileInputRef.current) fileInputRef.current.value = ''
+        const newFiles = files.filter((_, i) => i !== index)
+        const newPreviews = previews.filter((_, i) => i !== index)
+
+        // Clean up object URLs
+        if (previews[index]) URL.revokeObjectURL(previews[index])
+
+        setFiles(newFiles)
+        setPreviews(newPreviews)
+        onFilesSelect(newFiles)
+        if (newFiles.length === 0 && fileInputRef.current) {
+            fileInputRef.current.value = ''
+        }
     }
 
     const getIcon = () => {
@@ -56,55 +76,71 @@ const FileUpload: React.FC<FileUploadProps> = ({
         <div className="mb-6">
             <h3 className="text-txt-primary font-bold mb-2 text-sm px-1">{label}</h3>
 
-            <motion.div
-                onClick={() => fileInputRef.current?.click()}
-                whileTap={{ scale: 0.98 }}
-                className={`relative min-h-[100px] rounded-2xl border-2 border-dashed transition-colors flex flex-col items-center justify-center p-4 cursor-pointer overflow-hidden ${file ? 'border-accent-primary bg-accent-primary/5' : 'border-accent-primary/20 bg-bg-card hover:border-accent-primary/40'
-                    }`}
-            >
+            <div className="space-y-3">
+                <AnimatePresence>
+                    {files.length > 0 && (
+                        <div className="grid grid-cols-3 gap-2 mb-2">
+                            {files.map((file, idx) => (
+                                <motion.div
+                                    key={`${file.name}-${idx}`}
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.9 }}
+                                    className="relative aspect-square rounded-xl overflow-hidden border border-accent-primary/20 bg-bg-card flex items-center justify-center group"
+                                >
+                                    {previews[idx] ? (
+                                        <img src={previews[idx]} alt="preview" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="flex flex-col items-center gap-1 text-accent-primary p-2 overflow-hidden">
+                                            <FileText size={20} />
+                                            <span className="text-[8px] truncate max-w-full">{file.name}</span>
+                                        </div>
+                                    )}
+                                    <button
+                                        onClick={(e) => removeFile(idx, e)}
+                                        className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/50 text-white flex items-center justify-center backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                        <X size={12} />
+                                    </button>
+                                </motion.div>
+                            ))}
+                            {multiple && files.length < maxFiles && (
+                                <motion.div
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="aspect-square rounded-xl border-2 border-dashed border-accent-primary/20 flex flex-col items-center justify-center bg-accent-primary/5 cursor-pointer hover:border-accent-primary/40 transition-colors"
+                                >
+                                    <Plus size={24} className="text-accent-primary" />
+                                    <span className="text-[10px] text-txt-muted mt-1">Добавить</span>
+                                </motion.div>
+                            )}
+                        </div>
+                    )}
+                </AnimatePresence>
+
+                {files.length === 0 && (
+                    <motion.div
+                        onClick={() => fileInputRef.current?.click()}
+                        whileTap={{ scale: 0.98 }}
+                        className="relative min-h-[100px] rounded-2xl border-2 border-dashed border-accent-primary/20 bg-bg-card transition-colors flex flex-col items-center justify-center p-4 cursor-pointer hover:border-accent-primary/40"
+                    >
+                        <div className="w-12 h-12 rounded-full bg-accent-primary/10 flex items-center justify-center mb-1">
+                            {getIcon()}
+                        </div>
+                        <span className="text-txt-secondary text-sm font-medium">Нажмите для загрузки</span>
+                        {description && <span className="text-txt-muted text-xs">{description}</span>}
+                    </motion.div>
+                )}
+
                 <input
                     type="file"
                     ref={fileInputRef}
                     onChange={handleFileChange}
                     accept={accept}
+                    multiple={multiple}
                     className="hidden"
                 />
-
-                <AnimatePresence mode="wait">
-                    {file ? (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="flex flex-col items-center gap-2"
-                        >
-                            {preview ? (
-                                <img src={preview} alt="preview" className="w-full max-h-40 object-contain rounded-xl shadow-lg border border-accent-primary/20" />
-                            ) : (
-                                <div className="flex items-center gap-2 text-accent-primary font-medium">
-                                    <FileText size={20} />
-                                    <span className="text-sm truncate max-w-[200px]">{file.name}</span>
-                                </div>
-                            )}
-
-                            <button
-                                onClick={clearFile}
-                                className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center backdrop-blur-md hover:bg-black/70 transition-colors"
-                            >
-                                <X size={16} />
-                            </button>
-                        </motion.div>
-                    ) : (
-                        <div className="flex flex-col items-center text-center gap-2">
-                            <div className="w-12 h-12 rounded-full bg-accent-primary/10 flex items-center justify-center mb-1">
-                                {getIcon()}
-                            </div>
-                            <span className="text-txt-secondary text-sm font-medium">Нажмите для загрузки</span>
-                            {description && <span className="text-txt-muted text-xs">{description}</span>}
-                        </div>
-                    )}
-                </AnimatePresence>
-            </motion.div>
+            </div>
         </div>
     )
 }

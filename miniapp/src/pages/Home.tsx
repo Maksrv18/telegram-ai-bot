@@ -60,6 +60,23 @@ export default function Home() {
                     )
                 })}
             </motion.div>
+
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+                className="mt-12 mb-8 text-center"
+            >
+                <p className="text-txt-muted text-xs">Вопросы или предложения?</p>
+                <a
+                    href="https://t.me/Maksim_Rybakov18"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-accent-primary font-medium text-sm hover:underline block mt-1"
+                >
+                    Написать @Maksim_Rybakov18
+                </a>
+            </motion.div>
         </div>
     )
 }

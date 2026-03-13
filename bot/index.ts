@@ -162,6 +162,27 @@ export function createBot(): Bot<BotContext> {
         );
     });
 
+    // Handle data from Mini App
+    bot.on("message:web_app_data", async (ctx) => {
+        try {
+            const data = JSON.parse(ctx.message.web_app_data.data);
+            const { type, url, prompt, text } = data;
+
+            if (type === 'image' && url) {
+                await ctx.replyWithPhoto(url, { caption: prompt || "🎨 Сгенерировано в AI Studio" });
+            } else if (type === 'video' && url) {
+                await ctx.replyWithVideo(url, { caption: prompt || "🎬 Сгенерировано в AI Studio" });
+            } else if (type === 'audio' && url) {
+                await ctx.replyWithAudio(url, { caption: prompt || "🎙️ Сгенерировано в AI Studio" });
+            } else if (type === 'text' && text) {
+                await ctx.reply(text);
+            }
+        } catch (err) {
+            console.error("WebAppData error:", err);
+            await ctx.reply("❌ Ошибка при получении данных из приложения.");
+        }
+    });
+
     // Photo handler
     bot.on("message:photo", async (ctx) => {
         const photo = ctx.message.photo;

@@ -32,7 +32,8 @@ export default function VideoGen() {
         try {
             let imageInput: string | undefined = undefined
             if (sourceFile) {
-                imageInput = await uploadFile(sourceFile) || undefined
+                const result = await uploadFile(sourceFile)
+                imageInput = Array.isArray(result) ? result[0] : (result || undefined)
             }
             await generate({
                 type: 'video',
@@ -76,7 +77,7 @@ export default function VideoGen() {
             </div>
 
             <FileUpload
-                onFileSelect={setSourceFile}
+                onFilesSelect={(files) => setSourceFile(files[0] || null)}
                 label="Стартовый кадр (необязательно)"
                 description="Изображение для анимации (Image-to-Video)"
                 type="image"

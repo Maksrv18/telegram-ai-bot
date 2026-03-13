@@ -34,7 +34,8 @@ export default function TextToSpeech() {
         try {
             let refAudio: string | undefined = undefined
             if (sourceFile) {
-                refAudio = await uploadFile(sourceFile) || undefined
+                const result = await uploadFile(sourceFile)
+                refAudio = Array.isArray(result) ? result[0] : (result || undefined)
             }
             await generate({
                 type: 'tts',
@@ -93,7 +94,7 @@ export default function TextToSpeech() {
             </div>
 
             <FileUpload
-                onFileSelect={setSourceFile}
+                onFilesSelect={(files) => setSourceFile(files[0] || null)}
                 label="Клонировать голос (необязательно)"
                 description="Загрузите аудио (3-10 сек) для клонирования"
                 type="audio"

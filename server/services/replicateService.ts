@@ -48,7 +48,7 @@ export class ReplicateService {
             num_outputs: options.numOutputs || 1,
             ...(options.negativePrompt ? { negative_prompt: options.negativePrompt } : {}),
             ...(options.guidanceScale ? { guidance_scale: options.guidanceScale } : {}),
-            ...(options.imageInput ? { image_input: Array.isArray(options.imageInput) ? options.imageInput : [options.imageInput] } : {}),
+            ...(options.imageInput ? { image: Array.isArray(options.imageInput) ? (options.imageInput.length === 1 ? options.imageInput[0] : options.imageInput) : options.imageInput } : {}),
             ...(options.resolution ? { resolution: options.resolution } : {}),
             ...(options.outputFormat ? { output_format: options.outputFormat } : {}),
             ...(options.safetyFilterLevel ? { safety_filter_level: options.safetyFilterLevel } : {}),

@@ -26,20 +26,21 @@ export default function ImageGen() {
     const { generate, uploadFile, loading, error, result, reset } = useReplicate()
     const [prompt, setPrompt] = useState('')
     const [params, setParams] = useState<Record<string, any>>({ aspectRatio: '1:1', guidanceScale: 7, resolution: '2K', outputFormat: 'jpg' })
-    const [sourceFile, setSourceFile] = useState<File | null>(null)
+    const [sourceFiles, setSourceFiles] = useState<File[]>([])
     const [progressIdx, setProgressIdx] = useState(0)
 
     const setParam = (key: string, val: any) => setParams(p => ({ ...p, [key]: val }))
 
     const handleGenerate = async () => {
-        if (!prompt.trim() && !sourceFile) return
+        if (!prompt.trim() && sourceFiles.length === 0) return
         hapticFeedback('heavy')
         const interval = setInterval(() => setProgressIdx(i => (i + 1) % progress.length), 3000)
 
         try {
-            let imageInput: string | undefined = undefined
-            if (sourceFile) {
-                imageInput = await uploadFile(sourceFile) || undefined
+            let imageInput: string | string[] | undefined = undefined
+            if (sourceFiles.length > 0) {
+                const results = await uploadFile(sourceFiles)
+                imageInput = results as string[] | string
             }
             await generate({
                 type: 'image',
@@ -78,17 +79,19 @@ export default function ImageGen() {
             </div>
 
             <FileUpload
-                onFileSelect={setSourceFile}
-                label="Исходное фото (необязательно)"
-                description="Для Image-to-Image обработки"
+                onFilesSelect={setSourceFiles}
+                label="Исходные фото (необязательно)"
+                description="Для Image-to-Image обработки (до 5 фото)"
                 type="image"
+                multiple
+                maxFiles={5}
             />
 
             <ParamPanel params={MODEL_PARAMS} values={params} onChange={setParam} />
 
             <div className="mt-4 text-center">
                 <p className="text-txt-muted text-[10px] mb-2 font-medium uppercase tracking-wider">Стоимость: 1 ⭐️</p>
-                <button onClick={handleGenerate} disabled={loading || (!prompt.trim() && !sourceFile)} className="btn-generate mb-6">
+                <button onClick={handleGenerate} disabled={loading || (!prompt.trim() && sourceFiles.length === 0)} className="btn-generate mb-6">
                     {loading ? '⏳ Генерация...' : '🚀 Сгенерировать'}
                 </button>
             </div>

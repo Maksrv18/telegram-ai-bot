@@ -35,7 +35,8 @@ export default function VideoTranslate() {
         try {
             let photoUrl: string | undefined = undefined
             if (sourceFile) {
-                photoUrl = await uploadFile(sourceFile) || undefined
+                const result = await uploadFile(sourceFile)
+                photoUrl = Array.isArray(result) ? result[0] : (result || undefined)
             }
             await generate({
                 type: 'videotranslate',
@@ -86,7 +87,7 @@ export default function VideoTranslate() {
             </div>
 
             <FileUpload
-                onFileSelect={setSourceFile}
+                onFilesSelect={(files) => setSourceFile(files[0] || null)}
                 label="Фото персонажа (необязательно)"
                 description="Для Face Swap или Avatar режима"
                 type="image"
