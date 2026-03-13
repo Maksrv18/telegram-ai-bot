@@ -23,16 +23,16 @@ export async function handleStart(ctx: Context): Promise<void> {
     );
 
     await ctx.reply(
-        `🤖 *Добро пожаловать в AI Bot\\!*\n\n` +
+        `🤖 *Добро пожаловать в AI Bot!*\n\n` +
         `Я умею:\n` +
         `🎨 Генерировать изображения\n` +
         `✨ Улучшать фотографии\n` +
         `🪄 Убирать фон\n` +
         `🎬 Создавать видео\n` +
         `💬 Отвечать на вопросы\n\n` +
-        `Используй кнопки ниже или открой Mini App для удобного интерфейса\\!`,
+        `Используй кнопки ниже или открой Mini App для удобного интерфейса!`,
         {
-            parse_mode: "MarkdownV2",
+            parse_mode: "Markdown",
             reply_markup: {
                 inline_keyboard: keyboard,
             },
