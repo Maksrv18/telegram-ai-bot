@@ -24,6 +24,15 @@ export interface GenerateOptions {
     temperature?: number
     maxTokens?: number
     options?: Record<string, any>
+    imageInput?: string | string[]
+    refAudio?: string
+    refText?: string
+    voiceDescription?: string
+    resolution?: string
+    outputFormat?: string
+    translationMode?: string
+    photoUrl?: string
+    output_quality?: string // Legacy name fallback
 }
 
 export interface GenerationResult {
@@ -122,7 +131,23 @@ export function useReplicate() {
 
     const reset = useCallback(() => { setLoading(false); setError(null); setResult(null) }, [])
 
-    return { generate, loading, error, result, reset }
+    const uploadFile = useCallback(async (file: File): Promise<string | null> => {
+        const formData = new FormData()
+        formData.append('file', file)
+
+        try {
+            const { data } = await api.post('/upload', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            })
+            return data.url
+        } catch (err: any) {
+            console.error('Upload error:', err)
+            setError('Ошибка при загрузке файла')
+            return null
+        }
+    }, [])
+
+    return { generate, uploadFile, loading, error, result, reset }
 }
 
 export function useModels() {

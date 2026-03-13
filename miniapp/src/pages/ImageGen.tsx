@@ -6,11 +6,14 @@ import PromptInput from '../components/PromptInput'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ImageCard from '../components/ImageCard'
 import ParamPanel from '../components/ParamPanel'
+import FileUpload from '../components/FileUpload'
 import { useReplicate } from '../hooks/useReplicate'
 import { useTelegram } from '../hooks/useTelegram'
 import { downloadImage, sendToTelegramChat } from '../utils/download'
 const MODEL_PARAMS = [
     { key: 'aspectRatio', label: 'Соотношение сторон', type: 'select' as const, options: ['1:1', '16:9', '9:16', '4:3', '3:4'], default: '1:1' },
+    { key: 'resolution', label: 'Качество', type: 'select' as const, options: ['1K', '2K', '4K'], default: '2K' },
+    { key: 'outputFormat', label: 'Формат', type: 'select' as const, options: ['jpg', 'png'], default: 'jpg' },
     { key: 'negativePrompt', label: 'Исключить (Negative Prompt)', type: 'textarea' as const, placeholder: 'плохое качество, деформированные руки...' },
     { key: 'guidanceScale', label: 'Guidance Scale', type: 'slider' as const, min: 1, max: 20, default: 7, step: 0.5 },
 ]
@@ -20,20 +23,30 @@ const progress = ['🎨 Запускаю нейросеть...', '⚡ Обраб
 export default function ImageGen() {
     const navigate = useNavigate()
     const { hapticFeedback } = useTelegram()
-    const { generate, loading, error, result, reset } = useReplicate()
+    const { generate, uploadFile, loading, error, result, reset } = useReplicate()
     const [prompt, setPrompt] = useState('')
-    const [params, setParams] = useState<Record<string, any>>({ aspectRatio: '1:1', guidanceScale: 7 })
+    const [params, setParams] = useState<Record<string, any>>({ aspectRatio: '1:1', guidanceScale: 7, resolution: '2K', outputFormat: 'jpg' })
+    const [sourceFile, setSourceFile] = useState<File | null>(null)
     const [progressIdx, setProgressIdx] = useState(0)
 
     const setParam = (key: string, val: any) => setParams(p => ({ ...p, [key]: val }))
 
     const handleGenerate = async () => {
-        if (!prompt.trim()) return
+        if (!prompt.trim() && !sourceFile) return
         hapticFeedback('heavy')
         const interval = setInterval(() => setProgressIdx(i => (i + 1) % progress.length), 3000)
 
         try {
-            await generate({ type: 'image', prompt: prompt.trim(), ...params })
+            let imageInput: string | undefined = undefined
+            if (sourceFile) {
+                imageInput = await uploadFile(sourceFile) || undefined
+            }
+            await generate({
+                type: 'image',
+                prompt: prompt.trim(),
+                imageInput,
+                ...params
+            })
         } finally {
             clearInterval(interval)
             hapticFeedback('medium')
@@ -61,14 +74,24 @@ export default function ImageGen() {
             </div>
 
             <div className="mb-4">
-                <PromptInput value={prompt} onChange={setPrompt} placeholder="Киберпанк кот на неоновой улице под дождём..." />
+                <PromptInput value={prompt} onChange={setPrompt} placeholder="Опишите изображение или загрузите фото для обработки..." />
             </div>
+
+            <FileUpload
+                onFileSelect={setSourceFile}
+                label="Исходное фото (необязательно)"
+                description="Для Image-to-Image обработки"
+                type="image"
+            />
 
             <ParamPanel params={MODEL_PARAMS} values={params} onChange={setParam} />
 
-            <button onClick={handleGenerate} disabled={loading || !prompt.trim()} className="btn-generate mb-6">
-                {loading ? '⏳ Генерация...' : '🚀 Сгенерировать'}
-            </button>
+            <div className="mt-4 text-center">
+                <p className="text-txt-muted text-[10px] mb-2 font-medium uppercase tracking-wider">Стоимость: 1 ⭐️</p>
+                <button onClick={handleGenerate} disabled={loading || (!prompt.trim() && !sourceFile)} className="btn-generate mb-6">
+                    {loading ? '⏳ Генерация...' : '🚀 Сгенерировать'}
+                </button>
+            </div>
 
             {loading && <LoadingSpinner progress={progress[progressIdx]} subtitle="Обычно 5–30 секунд" />}
 

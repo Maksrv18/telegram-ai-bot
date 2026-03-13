@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import PromptInput from '../components/PromptInput'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ParamPanel from '../components/ParamPanel'
+import FileUpload from '../components/FileUpload'
 import { useReplicate } from '../hooks/useReplicate'
 import { useTelegram } from '../hooks/useTelegram'
 import { downloadImage, sendToTelegramChat } from '../utils/download'
@@ -12,22 +13,33 @@ import { downloadImage, sendToTelegramChat } from '../utils/download'
 const MODEL_PARAMS = [
     { key: 'duration', label: 'Длительность (сек)', type: 'slider' as const, min: 2, max: 10, default: 5 },
     { key: 'aspectRatio', label: 'Соотношение сторон', type: 'select' as const, options: ['16:9', '9:16', '1:1'], default: '16:9' },
+    { key: 'resolution', label: 'Качество', type: 'select' as const, options: ['720p', '1080p'], default: '720p' },
 ]
 
 export default function VideoGen() {
     const navigate = useNavigate()
     const { hapticFeedback } = useTelegram()
-    const { generate, loading, error, result, reset } = useReplicate()
+    const { generate, uploadFile, loading, error, result, reset } = useReplicate()
     const [prompt, setPrompt] = useState('')
-    const [params, setParams] = useState<Record<string, any>>({ duration: 5, aspectRatio: '16:9' })
+    const [params, setParams] = useState<Record<string, any>>({ duration: 5, aspectRatio: '16:9', resolution: '720p' })
+    const [sourceFile, setSourceFile] = useState<File | null>(null)
 
     const setParam = (key: string, val: any) => setParams(p => ({ ...p, [key]: val }))
 
     const handleGenerate = async () => {
-        if (!prompt.trim()) return
+        if (!prompt.trim() && !sourceFile) return
         hapticFeedback('heavy')
         try {
-            await generate({ type: 'video', prompt: prompt.trim(), ...params })
+            let imageInput: string | undefined = undefined
+            if (sourceFile) {
+                imageInput = await uploadFile(sourceFile) || undefined
+            }
+            await generate({
+                type: 'video',
+                prompt: prompt.trim(),
+                imageInput,
+                ...params
+            })
         } finally {
             hapticFeedback('medium')
         }
@@ -60,14 +72,24 @@ export default function VideoGen() {
             </div>
 
             <div className="mb-4">
-                <PromptInput value={prompt} onChange={setPrompt} placeholder="Кот играет джаз в баре при свечах..." />
+                <PromptInput value={prompt} onChange={setPrompt} placeholder="Опишите видео или загрузите фото для анимации..." />
             </div>
+
+            <FileUpload
+                onFileSelect={setSourceFile}
+                label="Стартовый кадр (необязательно)"
+                description="Изображение для анимации (Image-to-Video)"
+                type="image"
+            />
 
             <ParamPanel params={MODEL_PARAMS} values={params} onChange={setParam} />
 
-            <button onClick={handleGenerate} disabled={loading || !prompt.trim()} className="btn-generate mb-6">
-                {loading ? '⏳ Генерация видео...' : '🎬 Создать видео'}
-            </button>
+            <div className="mt-4 text-center">
+                <p className="text-txt-muted text-[10px] mb-2 font-medium uppercase tracking-wider">Стоимость: 1 ⭐️</p>
+                <button onClick={handleGenerate} disabled={loading || (!prompt.trim() && !sourceFile)} className="btn-generate mb-6">
+                    {loading ? '⏳ Генерация видео...' : '🎬 Создать видео'}
+                </button>
+            </div>
 
             {loading && <LoadingSpinner progress="🎬 Генерирую видео..." subtitle="Обычно 1–3 минуты" />}
 

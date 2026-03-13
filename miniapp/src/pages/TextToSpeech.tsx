@@ -4,6 +4,7 @@ import { Download, Send, Play, Square } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ParamPanel from '../components/ParamPanel'
+import FileUpload from '../components/FileUpload'
 import { useReplicate } from '../hooks/useReplicate'
 import { useTelegram } from '../hooks/useTelegram'
 import { downloadImage, sendToTelegramChat } from '../utils/download'
@@ -11,14 +12,17 @@ import { downloadImage, sendToTelegramChat } from '../utils/download'
 const MODEL_PARAMS = [
     { key: 'voice', label: 'Голос', type: 'select' as const, options: ['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer'], default: 'nova' },
     { key: 'speed', label: 'Скорость речи', type: 'slider' as const, min: 0.5, max: 2.0, step: 0.1, default: 1.0 },
+    { key: 'voiceDescription', label: 'Описание голоса (Design)', type: 'textarea' as const, placeholder: 'Мужской, низкий, с британским акцентом...' },
+    { key: 'refText', label: 'Текст аудио-образца', type: 'textarea' as const, placeholder: 'О чем говорят в образце для клонирования...' },
 ]
 
 export default function TextToSpeech() {
     const navigate = useNavigate()
     const { hapticFeedback } = useTelegram()
-    const { generate, loading, error, result, reset } = useReplicate()
+    const { generate, uploadFile, loading, error, result, reset } = useReplicate()
     const [text, setText] = useState('')
     const [params, setParams] = useState<Record<string, any>>({ voice: 'nova', speed: 1.0 })
+    const [sourceFile, setSourceFile] = useState<File | null>(null)
     const [playing, setPlaying] = useState(false)
     const [audioEl, setAudioEl] = useState<HTMLAudioElement | null>(null)
 
@@ -28,7 +32,16 @@ export default function TextToSpeech() {
         if (!text.trim()) return
         hapticFeedback('heavy')
         try {
-            await generate({ type: 'tts', prompt: text.trim(), ...params })
+            let refAudio: string | undefined = undefined
+            if (sourceFile) {
+                refAudio = await uploadFile(sourceFile) || undefined
+            }
+            await generate({
+                type: 'tts',
+                prompt: text.trim(),
+                refAudio,
+                ...params
+            })
         } finally {
             hapticFeedback('medium')
         }
@@ -77,14 +90,24 @@ export default function TextToSpeech() {
                     rows={5}
                     className="w-full bg-bg-card border border-accent-primary/20 rounded-2xl px-4 py-3 text-txt-primary text-sm resize-none outline-none focus:border-accent-primary/50 transition-colors"
                 />
-                <p className="text-txt-muted text-xs mt-1 text-right">{text.length} символов</p>
             </div>
+
+            <FileUpload
+                onFileSelect={setSourceFile}
+                label="Клонировать голос (необязательно)"
+                description="Загрузите аудио (3-10 сек) для клонирования"
+                type="audio"
+                accept="audio/*"
+            />
 
             <ParamPanel params={MODEL_PARAMS} values={params} onChange={setParam} />
 
-            <button onClick={handleGenerate} disabled={loading || !text.trim()} className="btn-generate mb-6">
-                {loading ? '⏳ Озвучиваю...' : '🎙️ Озвучить'}
-            </button>
+            <div className="mt-4 text-center">
+                <p className="text-txt-muted text-[10px] mb-2 font-medium uppercase tracking-wider">Стоимость: 1 ⭐️</p>
+                <button onClick={handleGenerate} disabled={loading || !text.trim()} className="btn-generate">
+                    {loading ? '⏳ Озвучиваю...' : '🎙️ Озвучить'}
+                </button>
+            </div>
 
             {loading && <LoadingSpinner progress="🎙️ Генерирую голос..." subtitle="qwen/qwen3-tts" />}
 

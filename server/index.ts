@@ -7,6 +7,7 @@ import express from "express";
 import cors from "cors";
 import apiRoutes from "./routes/api";
 import downloadRoutes from "./routes/download";
+import uploadRoutes from "./routes/uploads";
 import webhookRoutes, { setBotInstance } from "./routes/webhook";
 import { createBot, startBot } from "../bot/index";
 
@@ -20,7 +21,11 @@ app.use(express.urlencoded({ extended: true }));
 
 // API Routes
 app.use("/api/download", downloadRoutes);
+app.use("/api/upload", uploadRoutes);
 app.use("/api", apiRoutes);
+
+// Static files (uploads)
+app.use("/uploads", express.static(path.join(process.cwd(), "public/uploads")));
 
 // Webhook route (for production)
 app.use("/webhook", webhookRoutes);

@@ -4,6 +4,7 @@ import { Download, Send } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ParamPanel from '../components/ParamPanel'
+import FileUpload from '../components/FileUpload'
 import { useReplicate } from '../hooks/useReplicate'
 import { useTelegram } from '../hooks/useTelegram'
 import { downloadImage, sendToTelegramChat } from '../utils/download'
@@ -15,14 +16,16 @@ const MODEL_PARAMS = [
         default: 'Russian'
     },
     { key: 'speakerGender', label: 'Пол спикера', type: 'select' as const, options: ['male', 'female'], default: 'male' },
+    { key: 'translationMode', label: 'Режим', type: 'select' as const, options: ['speed', 'precision'], default: 'speed' },
 ]
 
 export default function VideoTranslate() {
     const navigate = useNavigate()
     const { hapticFeedback } = useTelegram()
-    const { generate, loading, error, result, reset } = useReplicate()
+    const { generate, uploadFile, loading, error, result, reset } = useReplicate()
     const [videoUrl, setVideoUrl] = useState('')
-    const [params, setParams] = useState<Record<string, any>>({ targetLanguage: 'Russian', speakerGender: 'male' })
+    const [params, setParams] = useState<Record<string, any>>({ targetLanguage: 'Russian', speakerGender: 'male', translationMode: 'speed' })
+    const [sourceFile, setSourceFile] = useState<File | null>(null)
 
     const setParam = (key: string, val: any) => setParams(p => ({ ...p, [key]: val }))
 
@@ -30,7 +33,16 @@ export default function VideoTranslate() {
         if (!videoUrl.trim()) return
         hapticFeedback('heavy')
         try {
-            await generate({ type: 'videotranslate', videoUrl: videoUrl.trim(), ...params })
+            let photoUrl: string | undefined = undefined
+            if (sourceFile) {
+                photoUrl = await uploadFile(sourceFile) || undefined
+            }
+            await generate({
+                type: 'videotranslate',
+                videoUrl: videoUrl.trim(),
+                photoUrl,
+                ...params
+            })
         } finally {
             hapticFeedback('medium')
         }
@@ -73,11 +85,21 @@ export default function VideoTranslate() {
                 />
             </div>
 
+            <FileUpload
+                onFileSelect={setSourceFile}
+                label="Фото персонажа (необязательно)"
+                description="Для Face Swap или Avatar режима"
+                type="image"
+            />
+
             <ParamPanel params={MODEL_PARAMS} values={params} onChange={setParam} />
 
-            <button onClick={handleTranslate} disabled={loading || !videoUrl.trim()} className="btn-generate mb-6">
-                {loading ? '⏳ Переводю...' : '🌐 Перевести видео'}
-            </button>
+            <div className="mt-4 text-center">
+                <p className="text-txt-muted text-[10px] mb-2 font-medium uppercase tracking-wider">Стоимость: 1 ⭐️</p>
+                <button onClick={handleTranslate} disabled={loading || !videoUrl.trim()} className="btn-generate mb-6">
+                    {loading ? '⏳ Переводю...' : '🌐 Перевести видео'}
+                </button>
+            </div>
 
             {loading && <LoadingSpinner progress="🌐 Перевожу видео..." subtitle="heygen/video-translate" />}
 

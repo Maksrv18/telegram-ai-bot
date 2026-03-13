@@ -259,11 +259,16 @@ async function processGeneration(
 
         switch (type) {
             case "image":
+            case "upscale":
                 outputUrls = await replicateService.generateImage(params.prompt || "", {
                     aspectRatio: params.aspectRatio,
                     numOutputs: params.numOutputs || 1,
                     negativePrompt: params.negativePrompt,
                     guidanceScale: params.guidanceScale,
+                    imageInput: params.imageInput || params.imageUrl,
+                    resolution: params.resolution || params.output_quality,
+                    outputFormat: params.outputFormat,
+                    ...(params.options || {}),
                 });
                 break;
 
@@ -276,6 +281,10 @@ async function processGeneration(
                 outputUrls = [await replicateService.generateVideo(params.prompt || "", {
                     duration: params.duration,
                     aspectRatio: params.aspectRatio,
+                    image: params.imageUrl || params.imageInput,
+                    negativePrompt: params.negativePrompt,
+                    resolution: params.resolution,
+                    ...(params.options || {}),
                 })];
                 break;
 
@@ -284,6 +293,10 @@ async function processGeneration(
                     voice: params.voice,
                     language: params.language,
                     speed: params.speed,
+                    refAudio: params.refAudio,
+                    refText: params.refText,
+                    voiceDescription: params.voiceDescription,
+                    ...(params.options || {}),
                 })];
                 break;
 
@@ -291,6 +304,9 @@ async function processGeneration(
                 if (!params.videoUrl) throw new Error("Video URL required");
                 outputUrls = [await replicateService.translateVideo(params.videoUrl, params.targetLanguage || "Russian", {
                     speakerGender: params.speakerGender,
+                    translationMode: params.translationMode,
+                    photoUrl: params.photoUrl,
+                    ...(params.options || {}),
                 })];
                 break;
 
@@ -300,6 +316,7 @@ async function processGeneration(
                     systemPrompt: params.systemPrompt,
                     temperature: params.temperature,
                     maxTokens: params.maxTokens,
+                    ...(params.options || {}),
                 });
                 outputUrls = [response];
                 break;
